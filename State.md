@@ -5,3 +5,4 @@
 - 2026-07-12: IMPLEMENTATION_PLAN.md — убраны сервисы/инфра/деплой, оставлены этапы 0–9
 - 2026-07-12: этап 10 — развёртывание на GitHub (Pages + Actions)
 - 2026-07-12: этап 0 — каркас backend (FastAPI, core, health) + frontend (React/Vite, TWA SDK), docker-compose postgres
+- 2026-07-12: этап 1 — catalog: catalog_items, CRUD API /api/v1/catalog, экран справочника (вкладки tool/plate/jaw, поиск)
