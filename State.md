@@ -4,3 +4,4 @@
 - 2026-07-12: IMPLEMENTATION_PLAN.md в корне main на GitHub (ghostvip1717-glitch/cnc-tech-process)
 - 2026-07-12: IMPLEMENTATION_PLAN.md — убраны сервисы/инфра/деплой, оставлены этапы 0–9
 - 2026-07-12: этап 10 — развёртывание на GitHub (Pages + Actions)
+- 2026-07-12: этап 0 — каркас backend (FastAPI, core, health) + frontend (React/Vite, TWA SDK), docker-compose postgres
