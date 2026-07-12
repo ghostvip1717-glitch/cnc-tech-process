@@ -9,3 +9,4 @@ dist/
 *.tsbuildinfo
 
 postgres_data/
+uploads/

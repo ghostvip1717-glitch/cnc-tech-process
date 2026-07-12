@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,6 +8,8 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://cnc:cnc@localhost:5432/cnc_tech_process"
     api_v1_prefix: str = "/api/v1"
+    uploads_dir: Path = Path(__file__).resolve().parent.parent / "uploads"
+    uploads_url_prefix: str = "/uploads"
 
 
 settings = Settings()

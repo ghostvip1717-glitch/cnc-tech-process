@@ -33,7 +33,29 @@ npm install
 npm run dev
 ```
 
-Открыть http://localhost:5173 → «Открыть справочник».
+Открыть http://localhost:5173 → навигация «Детали» / «Справочник».
+
+## API деталей (этап 2)
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/api/v1/parts` | Список (`?q=поиск` по номеру/названию) |
+| POST | `/api/v1/parts` | Создание `{number, title}` |
+| GET/PATCH/DELETE | `/api/v1/parts/{id}` | Карточка детали |
+| POST | `/api/v1/parts/{id}/photos` | Upload фото (`multipart/form-data`, поле `file`) |
+| DELETE | `/api/v1/parts/{id}/photos/{photo_id}` | Удаление фото |
+| PATCH | `/api/v1/parts/{id}/photos/reorder` | `{photo_ids: [id, ...]}` |
+
+Фото хранятся в `backend/uploads/parts/{part_id}/`, отдаются по `/uploads/...`.
+
+Проверка:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/parts -H 'Content-Type: application/json' \
+  -d '{"number":"В-204","title":"Втулка"}'
+curl -X POST http://localhost:8000/api/v1/parts/1/photos -F 'file=@photo.jpg;type=image/jpeg'
+curl 'http://localhost:8000/api/v1/parts?q=В-204'
+```
 
 ## API справочника (этап 1)
 

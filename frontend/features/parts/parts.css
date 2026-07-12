@@ -1,0 +1,166 @@
+.parts-page {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.parts-page h1 {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+}
+
+.parts-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.parts-search {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  font: inherit;
+}
+
+.parts-button {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font: inherit;
+  cursor: pointer;
+  background: var(--tg-theme-button-color, #2481cc);
+  color: var(--tg-theme-button-text-color, #fff);
+}
+
+.parts-button.secondary {
+  background: #e8e8e8;
+  color: #222;
+}
+
+.parts-button.danger {
+  background: #d64545;
+  color: #fff;
+}
+
+.parts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.parts-list-item {
+  border: 1px solid #e5e5e5;
+  border-radius: 0.75rem;
+  padding: 0.875rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.parts-list-item h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.parts-list-item p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.parts-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.75rem;
+  background: #fafafa;
+}
+
+.parts-form label {
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.9rem;
+}
+
+.parts-form input {
+  font: inherit;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.parts-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.parts-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.parts-photo-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.parts-photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.parts-photo-actions {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.parts-photo-actions button {
+  flex: 1;
+  min-width: 2.5rem;
+  padding: 0.375rem;
+  font-size: 0.8rem;
+}
+
+.parts-empty,
+.parts-error,
+.parts-loading {
+  color: #666;
+  margin: 0.5rem 0 1rem;
+}
+
+.parts-error {
+  color: #b00020;
+}
+
+.parts-upload {
+  margin-top: 1rem;
+}
+
+.parts-detail-header {
+  margin-bottom: 1rem;
+}
+
+.parts-detail-header h1 {
+  margin: 0 0 0.25rem;
+}
+
+.parts-detail-header p {
+  margin: 0;
+  color: #555;
+}

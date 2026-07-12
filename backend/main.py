@@ -2,8 +2,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 import catalog.models  # noqa: F401 — register ORM models
+import parts.models  # noqa: F401 — register ORM models
 from catalog.router import router as catalog_router
 from core.config import settings
 from core.database import Base, engine
@@ -20,6 +22,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Техпроцессы ЧПУ", lifespan=lifespan)
+
+settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount(settings.uploads_url_prefix, StaticFiles(directory=settings.uploads_dir), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
