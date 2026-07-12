@@ -1,4 +1,5 @@
 import { getTelegramInitData } from "../../telegram/init";
+import { resolveApiUrl } from "./config";
 
 export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -13,7 +14,7 @@ export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T>
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(resolveApiUrl(url), {
     ...init,
     headers,
   });

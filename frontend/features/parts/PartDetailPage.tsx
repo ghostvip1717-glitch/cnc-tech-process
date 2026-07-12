@@ -8,6 +8,7 @@ import {
   uploadPartPhoto,
   type Part,
 } from "../../shared/api/parts";
+import { resolveApiUrl } from "../../shared/api/config";
 import { TechProcessBlock } from "../tech-process/TechProcessBlock";
 import { AssemblyBlock } from "../assembly/AssemblyBlock";
 import "./parts.css";
@@ -208,7 +209,7 @@ export function PartDetailPage({ partId, onBack }: PartDetailPageProps) {
         <div className="parts-gallery">
           {part.photos.map((photo, index) => (
             <div key={photo.id} className="parts-photo-card">
-              <img src={photo.url} alt={`Фото ${part.number}`} />
+              <img src={resolveApiUrl(photo.url)} alt={`Фото ${part.number}`} />
               <div className="parts-photo-actions">
                 <button
                   className="parts-button secondary"

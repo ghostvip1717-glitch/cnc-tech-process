@@ -17,7 +17,7 @@ Telegram Mini App для учёта техпроцессов на токарно
 | 6 | Главный экран и навигация | готов |
 | 7 | Telegram auth | готов |
 | 8–9 | Копирование ТП, история | — |
-| 10 | Деплой GitHub Pages + Actions | — |
+| 10 | Деплой GitHub Pages + Actions | готов |
 
 ## Локальный запуск
 
@@ -82,6 +82,60 @@ curl http://localhost:8000/api/v1/parts
 TELEGRAM_AUTH_ENABLED=true BOT_TOKEN=xxx uvicorn main:app --app-dir backend
 curl -i http://localhost:8000/api/v1/parts
 ```
+
+## Деплой на GitHub (этап 10)
+
+### Mini App URL
+
+После настройки Pages:
+
+`https://ghostvip1717-glitch.github.io/cnc-tech-process/`
+
+В BotFather укажите этот URL как Mini App.
+
+### GitHub Pages (фронтенд)
+
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions**
+2. Добавьте **Secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Назначение |
+|--------|------------|
+| `VITE_API_URL` | URL API в продакшене (например `https://api.example.com`) |
+| `BOT_TOKEN` | Токен бота (для API-хостинга) |
+| `DATABASE_URL` | PostgreSQL (для API-хостинга) |
+| `API_DEPLOY_WEBHOOK_URL` | Опционально: webhook деплоя API (Render/Fly/Railway) |
+
+3. Push в `main` → workflow **Deploy Frontend** (`.github/workflows/deploy-frontend.yml`)
+4. Логи: **Actions** → Deploy Frontend
+
+Локальная проверка сборки под Pages:
+
+```bash
+cd frontend
+VITE_BASE_PATH=/cnc-tech-process/ VITE_API_URL=https://api.example.com npm run build
+```
+
+### API (вне GitHub Pages)
+
+GitHub Pages отдаёт только статику. API размещается отдельно (Render, Fly.io, Railway, VPS).
+
+- Workflow **Deploy API** (`.github/workflows/deploy-api.yml`): проверка сборки backend при push в `main`
+- Если задан `API_DEPLOY_WEBHOOK_URL` — POST на webhook внешнего хостинга
+- Docker: `backend/Dockerfile`
+
+Переменные API в продакшене:
+
+```env
+DATABASE_URL=postgresql+asyncpg://...
+BOT_TOKEN=...
+TELEGRAM_AUTH_ENABLED=true
+```
+
+### Проверка
+
+1. Actions зелёный после push в `main`
+2. Pages открывается по URL выше
+3. Из Telegram бота → Mini App → деталь и техпроцесс на экране
 
 ## API
 

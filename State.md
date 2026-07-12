@@ -12,3 +12,4 @@
 - 2026-07-12: этап 5 — assembly: GET /parts/{id}/required-items, блок «Нужно для изготовления»
 - 2026-07-12: этап 6 — главный экран: поиск+список деталей, нижняя навигация Детали|Инструмент, AppLayout
 - 2026-07-12: этап 7 — telegram_auth: middleware X-Telegram-Init-Data, TELEGRAM_AUTH_ENABLED, api client wrapper
+- 2026-07-12: этап 10 — GitHub Actions deploy-frontend (Pages) + deploy-api, VITE_BASE_PATH=/cnc-tech-process/, backend/Dockerfile
