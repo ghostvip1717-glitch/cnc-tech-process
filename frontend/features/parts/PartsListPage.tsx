@@ -4,9 +4,10 @@ import "./parts.css";
 
 interface PartsListPageProps {
   onOpenPart: (partId: number) => void;
+  showHeading?: boolean;
 }
 
-export function PartsListPage({ onOpenPart }: PartsListPageProps) {
+export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageProps) {
   const [parts, setParts] = useState<Part[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -60,7 +61,7 @@ export function PartsListPage({ onOpenPart }: PartsListPageProps) {
 
   return (
     <section className="parts-page">
-      <h1>Детали</h1>
+      {showHeading && <h1>Детали</h1>}
 
       <div className="parts-toolbar">
         <input

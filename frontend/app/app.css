@@ -1,0 +1,81 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, sans-serif;
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #000000);
+}
+
+.app-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  flex: 1;
+}
+
+.app-header-back {
+  border: none;
+  background: transparent;
+  color: var(--tg-theme-link-color, #2481cc);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.app-content {
+  flex: 1;
+  padding-bottom: 4.5rem;
+  overflow-y: auto;
+}
+
+.app-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #e5e5e5;
+  background: var(--tg-theme-bg-color, #ffffff);
+}
+
+.app-nav-button {
+  flex: 1;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  font: inherit;
+  cursor: pointer;
+  background: #e8e8e8;
+  color: #222;
+}
+
+.app-nav-button.active {
+  background: var(--tg-theme-button-color, #2481cc);
+  color: var(--tg-theme-button-text-color, #fff);
+}
+
+.app-home-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1rem 0.5rem;
+}
+
+.app-catalog-button {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  font: inherit;
+  cursor: pointer;
+  background: #e8e8e8;
+  color: #222;
+}

@@ -10,3 +10,4 @@
 - 2026-07-12: этап 3 — tech_process: tech_processes/setups, API /parts/{id}/tech-process, блок установов на карточке детали
 - 2026-07-12: этап 4 — operations: CRUD + reorder, таблица операций в установе, запрет удаления catalog item в ТП
 - 2026-07-12: этап 5 — assembly: GET /parts/{id}/required-items, блок «Нужно для изготовления»
+- 2026-07-12: этап 6 — главный экран: поиск+список деталей, нижняя навигация Детали|Инструмент, AppLayout

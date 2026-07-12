@@ -15,7 +15,7 @@ const TABS: { type: CatalogItemType; label: string }[] = [
   { type: "jaw", label: "Кулачки" },
 ];
 
-export function CatalogPage() {
+export function CatalogPage({ showHeading = true }: { showHeading?: boolean }) {
   const [activeType, setActiveType] = useState<CatalogItemType>("tool");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -106,7 +106,7 @@ export function CatalogPage() {
 
   return (
     <section className="catalog-page">
-      <h1>Справочник</h1>
+      {showHeading && <h1>Справочник</h1>}
 
       <div className="catalog-tabs">
         {TABS.map((tab) => (
