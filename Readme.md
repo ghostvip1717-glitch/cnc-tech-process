@@ -93,6 +93,27 @@ curl -i http://localhost:8000/api/v1/parts
 
 В BotFather укажите этот URL как Mini App.
 
+### Ошибка «Request failed with status 404»
+
+Фронт на Pages работает, но **API ещё не подключён**. Запросы уходят на `github.io/api/v1/...` — там нет сервера.
+
+**Исправление (≈10 мин):**
+
+1. **Поднять API на Render** (бесплатно):  
+   [Deploy to Render](https://render.com/deploy?repo=https://github.com/ghostvip1717-glitch/cnc-tech-process)  
+   Дождаться статуса **Live**, скопировать URL вида `https://cnc-tech-process-api.onrender.com`
+
+2. **Проверить API:**  
+   `curl https://ВАШ-URL.onrender.com/health` → `{"status":"OK"}`
+
+3. **GitHub → Settings → Secrets and variables → Actions** → New secret:  
+   - Name: `VITE_API_URL`  
+   - Value: `https://ВАШ-URL.onrender.com` (без слэша в конце)
+
+4. **Actions → Deploy Frontend → Run workflow** → дождаться зелёной галочки
+
+5. Обновить Mini App в браузере (Ctrl+F5)
+
 ### GitHub Pages (фронтенд)
 
 1. **Settings → Pages → Build and deployment → Source: GitHub Actions** (рекомендуется; если стоит *Deploy from branch*, в корне лежит собранный `index.html` + `.nojekyll`)

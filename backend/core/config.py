@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     telegram_auth_enabled: bool = False
     telegram_allowed_user_ids: list[int] = []
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            # Render/Railway often provide postgres:// or postgresql://
+            if value.startswith("postgres://"):
+                return "postgresql+asyncpg://" + value.removeprefix("postgres://")
+            if value.startswith("postgresql://"):
+                return "postgresql+asyncpg://" + value.removeprefix("postgresql://")
+        return value
+
     @field_validator("telegram_allowed_user_ids", mode="before")
     @classmethod
     def parse_allowed_user_ids(cls, value: object) -> list[int]:

@@ -14,3 +14,4 @@
 - 2026-07-12: этап 7 — telegram_auth: middleware X-Telegram-Init-Data, TELEGRAM_AUTH_ENABLED, api client wrapper
 - 2026-07-12: этап 10 — GitHub Actions deploy-frontend (Pages) + deploy-api, VITE_BASE_PATH=/cnc-tech-process/, backend/Dockerfile
 - 2026-07-12: fix Pages — статика Mini App в корне + docs/ (.nojekyll), merge stage-10 в main
+- 2026-07-12: render.yaml для API; workflow синхронизирует статику с VITE_API_URL
