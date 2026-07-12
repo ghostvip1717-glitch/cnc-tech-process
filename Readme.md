@@ -4,6 +4,21 @@ Telegram Mini App для учёта техпроцессов на токарно
 
 План реализации: [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)
 
+## Статус этапов
+
+| Этап | Модуль | Статус |
+|------|--------|--------|
+| 0 | Каркас FastAPI + React/Vite | готов |
+| 1 | Справочник `catalog` | готов |
+| 2 | Детали `parts` + фото | готов |
+| 3 | Техпроцесс: установы | готов |
+| 4 | Операции | готов |
+| 5 | Сводка `assembly` | готов |
+| 6 | Главный экран и навигация | готов |
+| 7 | Telegram auth | готов |
+| 8–9 | Копирование ТП, история | — |
+| 10 | Деплой GitHub Pages + Actions | — |
+
 ## Локальный запуск
 
 ### 1. PostgreSQL
@@ -33,87 +48,75 @@ npm install
 npm run dev
 ```
 
-Открыть http://localhost:5173 → навигация «Детали» / «Справочник».
+Открыть http://localhost:5173 → навигация «Детали» / «Инструмент».
 
-## API деталей (этап 2)
+## Telegram auth (этап 7)
+
+По умолчанию для локальной разработки auth **выключен**:
+
+```env
+TELEGRAM_AUTH_ENABLED=false
+```
+
+Для продакшена:
+
+```env
+BOT_TOKEN=<токен бота из BotFather>
+TELEGRAM_AUTH_ENABLED=true
+# опционально — только эти telegram user id:
+TELEGRAM_ALLOWED_USER_IDS=123456789
+```
+
+- Фронт передаёт `WebApp.initData` в заголовке `X-Telegram-Init-Data` (общий клиент `frontend/shared/api/client.ts`)
+- Бэкенд проверяет подпись через `BOT_TOKEN` (`backend/core/telegram_auth.py`)
+- `GET /health` и статика `/uploads/` — без auth
+- При `TELEGRAM_AUTH_ENABLED=true` запрос к `/api/v1/*` без заголовка → **401**
+
+Проверка:
+
+```bash
+# auth выключен — OK
+curl http://localhost:8000/api/v1/parts
+
+# auth включён — 401 без заголовка
+TELEGRAM_AUTH_ENABLED=true BOT_TOKEN=xxx uvicorn main:app --app-dir backend
+curl -i http://localhost:8000/api/v1/parts
+```
+
+## API
+
+### Справочник (`/api/v1/catalog`)
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| GET | `/api/v1/parts` | Список (`?q=поиск` по номеру/названию) |
-| POST | `/api/v1/parts` | Создание `{number, title}` |
-| GET/PATCH/DELETE | `/api/v1/parts/{id}` | Карточка детали |
-| POST | `/api/v1/parts/{id}/photos` | Upload фото (`multipart/form-data`, поле `file`) |
+| GET | `/api/v1/catalog` | Список (`?type=tool\|plate\|jaw`, `?q=`) |
+| POST | `/api/v1/catalog` | `{type, name, note?}` |
+| GET/PATCH/DELETE | `/api/v1/catalog/{id}` | CRUD |
+
+### Детали (`/api/v1/parts`)
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET/POST | `/api/v1/parts` | Список (`?q=`) / создание |
+| GET/PATCH/DELETE | `/api/v1/parts/{id}` | Карточка |
+| POST | `/api/v1/parts/{id}/photos` | Upload фото (`file`) |
 | DELETE | `/api/v1/parts/{id}/photos/{photo_id}` | Удаление фото |
-| PATCH | `/api/v1/parts/{id}/photos/reorder` | `{photo_ids: [id, ...]}` |
+| PATCH | `/api/v1/parts/{id}/photos/reorder` | `{photo_ids}` |
 
-Фото хранятся в `backend/uploads/parts/{part_id}/`, отдаются по `/uploads/...`.
+Фото: `backend/uploads/parts/{part_id}/`, URL `/uploads/...`
 
-Проверка:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/parts -H 'Content-Type: application/json' \
-  -d '{"number":"В-204","title":"Втулка"}'
-curl -X POST http://localhost:8000/api/v1/parts/1/photos -F 'file=@photo.jpg;type=image/jpeg'
-curl 'http://localhost:8000/api/v1/parts?q=В-204'
-```
-
-## API техпроцесса (этап 3)
+### Техпроцесс (`/api/v1/parts/{id}/tech-process`)
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| GET | `/api/v1/parts/{id}/tech-process` | Техпроцесс с установами |
-| PUT | `/api/v1/parts/{id}/tech-process` | Создать техпроцесс |
-| POST | `/api/v1/parts/{id}/tech-process/setups` | `{jaw_id}` — добавить установ |
-| PATCH | `/api/v1/parts/{id}/tech-process/setups/{setup_id}` | `{jaw_id}` — сменить кулачки |
-| DELETE | `/api/v1/parts/{id}/tech-process/setups/{setup_id}` | Удалить установ |
+| GET/PUT | `.../tech-process` | Получить / создать |
+| POST/PATCH/DELETE | `.../setups/{setup_id}` | Установы (`jaw_id`) |
+| POST/PATCH/DELETE | `.../operations/{op_id}` | Операции |
+| PATCH | `.../setups/{setup_id}/operations/reorder` | Порядок операций |
 
-Проверка:
+### Сводка (`/api/v1/parts/{id}/required-items`)
 
-```bash
-curl -X PUT http://localhost:8000/api/v1/parts/1/tech-process
-curl -X POST http://localhost:8000/api/v1/parts/1/tech-process/setups \
-  -H 'Content-Type: application/json' -d '{"jaw_id":2}'
-curl http://localhost:8000/api/v1/parts/1/tech-process
-```
-
-## API операций (этап 4)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | `/api/v1/parts/{id}/tech-process/setups/{setup_id}/operations` | `{op_number, title, tool_id, plate_id, comment?}` |
-| PATCH | `/api/v1/parts/{id}/tech-process/operations/{op_id}` | Изменение полей операции |
-| DELETE | `/api/v1/parts/{id}/tech-process/operations/{op_id}` | Удаление |
-| PATCH | `/api/v1/parts/{id}/tech-process/setups/{setup_id}/operations/reorder` | `{operation_ids: [...]}` |
-
-Позиции справочника, используемые в техпроцессе, удалить нельзя (409).
-
-## API сводки (этап 5)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET | `/api/v1/parts/{id}/required-items` | Уникальные инструмент, пластины, кулачки |
-
-```bash
-curl http://localhost:8000/api/v1/parts/1/required-items
-```
-
-## API справочника (этап 1)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET | `/api/v1/catalog` | Список (`?type=tool\|plate\|jaw`, `?q=поиск`) |
-| POST | `/api/v1/catalog` | Создание `{type, name, note?}` |
-| GET | `/api/v1/catalog/{id}` | Одна позиция |
-| PATCH | `/api/v1/catalog/{id}` | Изменение `{name?, note?}` |
-| DELETE | `/api/v1/catalog/{id}` | Удаление |
-
-Проверка:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/catalog -H 'Content-Type: application/json' \
-  -d '{"type":"tool","name":"CNMG 120408"}'
-curl 'http://localhost:8000/api/v1/catalog?q=CNMG'
-```
+Уникальные инструмент, пластины, кулачки для детали.
 
 ## Стек
 

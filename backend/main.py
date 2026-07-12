@@ -11,6 +11,7 @@ from catalog.router import router as catalog_router
 from assembly.router import router as assembly_router
 from core.config import settings
 from core.database import Base, engine
+from core.telegram_auth import TelegramAuthMiddleware
 from parts.router import router as parts_router
 from tech_process.router import router as tech_process_router
 
@@ -35,6 +36,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(TelegramAuthMiddleware)
 
 app.include_router(catalog_router, prefix=settings.api_v1_prefix)
 app.include_router(parts_router, prefix=settings.api_v1_prefix)

@@ -1,3 +1,5 @@
+import { apiRequest } from "./client";
+
 export type CatalogItemType = "tool" | "plate" | "jaw";
 
 export interface CatalogItem {
@@ -20,31 +22,6 @@ export interface CatalogItemUpdate {
 
 const API_BASE = "/api/v1/catalog";
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    const message =
-      typeof errorBody?.detail === "string"
-        ? errorBody.detail
-        : `Request failed with status ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export async function listCatalogItems(params?: {
   type?: CatalogItemType;
   q?: string;
@@ -59,13 +36,13 @@ export async function listCatalogItems(params?: {
 
   const query = searchParams.toString();
   const url = query ? `${API_BASE}?${query}` : API_BASE;
-  return request<CatalogItem[]>(url);
+  return apiRequest<CatalogItem[]>(url);
 }
 
 export async function createCatalogItem(
   payload: CatalogItemCreate,
 ): Promise<CatalogItem> {
-  return request<CatalogItem>(API_BASE, {
+  return apiRequest<CatalogItem>(API_BASE, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -75,12 +52,12 @@ export async function updateCatalogItem(
   id: number,
   payload: CatalogItemUpdate,
 ): Promise<CatalogItem> {
-  return request<CatalogItem>(`${API_BASE}/${id}`, {
+  return apiRequest<CatalogItem>(`${API_BASE}/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
 }
 
 export async function deleteCatalogItem(id: number): Promise<void> {
-  await request<void>(`${API_BASE}/${id}`, { method: "DELETE" });
+  await apiRequest<void>(`${API_BASE}/${id}`, { method: "DELETE" });
 }

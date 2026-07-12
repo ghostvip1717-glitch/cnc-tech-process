@@ -12,4 +12,8 @@ export function initTelegramWebApp(): void {
   initialized = true;
 }
 
+export function getTelegramInitData(): string {
+  return WebApp.initData;
+}
+
 export { WebApp };

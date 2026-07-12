@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +11,20 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     uploads_dir: Path = Path(__file__).resolve().parent.parent / "uploads"
     uploads_url_prefix: str = "/uploads"
+    bot_token: str = ""
+    telegram_auth_enabled: bool = False
+    telegram_allowed_user_ids: list[int] = []
+
+    @field_validator("telegram_allowed_user_ids", mode="before")
+    @classmethod
+    def parse_allowed_user_ids(cls, value: object) -> list[int]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, list):
+            return [int(item) for item in value]
+        if isinstance(value, str):
+            return [int(item.strip()) for item in value.split(",") if item.strip()]
+        raise ValueError("invalid telegram_allowed_user_ids")
 
 
 settings = Settings()

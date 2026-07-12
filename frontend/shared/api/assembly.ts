@@ -1,3 +1,5 @@
+import { apiRequest } from "./client";
+
 export interface RequiredItem {
   id: number;
   type: "tool" | "plate" | "jaw";
@@ -11,14 +13,5 @@ export interface RequiredItems {
 }
 
 export async function getRequiredItems(partId: number): Promise<RequiredItems> {
-  const response = await fetch(`/api/v1/parts/${partId}/required-items`);
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    const message =
-      typeof errorBody?.detail === "string"
-        ? errorBody.detail
-        : `Request failed with status ${response.status}`;
-    throw new Error(message);
-  }
-  return response.json() as Promise<RequiredItems>;
+  return apiRequest<RequiredItems>(`/api/v1/parts/${partId}/required-items`);
 }

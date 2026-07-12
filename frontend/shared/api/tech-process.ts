@@ -1,3 +1,5 @@
+import { apiRequest } from "./client";
+
 export interface Operation {
   id: number;
   setup_id: number;
@@ -42,37 +44,17 @@ export interface OperationUpdate {
 
 const apiBase = (partId: number) => `/api/v1/parts/${partId}/tech-process`;
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    const message =
-      typeof errorBody?.detail === "string"
-        ? errorBody.detail
-        : `Request failed with status ${response.status}`;
-    throw new Error(message);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export async function getTechProcess(partId: number): Promise<TechProcess> {
-  return requestJson<TechProcess>(apiBase(partId));
+  return apiRequest<TechProcess>(apiBase(partId));
 }
 
 export async function createTechProcess(partId: number): Promise<TechProcess> {
-  return requestJson<TechProcess>(apiBase(partId), { method: "PUT" });
+  return apiRequest<TechProcess>(apiBase(partId), { method: "PUT" });
 }
 
 export async function createSetup(partId: number, jawId: number): Promise<Setup> {
-  return requestJson<Setup>(`${apiBase(partId)}/setups`, {
+  return apiRequest<Setup>(`${apiBase(partId)}/setups`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jaw_id: jawId }),
   });
 }
@@ -82,15 +64,14 @@ export async function updateSetup(
   setupId: number,
   jawId: number,
 ): Promise<Setup> {
-  return requestJson<Setup>(`${apiBase(partId)}/setups/${setupId}`, {
+  return apiRequest<Setup>(`${apiBase(partId)}/setups/${setupId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jaw_id: jawId }),
   });
 }
 
 export async function deleteSetup(partId: number, setupId: number): Promise<void> {
-  await requestJson<void>(`${apiBase(partId)}/setups/${setupId}`, { method: "DELETE" });
+  await apiRequest<void>(`${apiBase(partId)}/setups/${setupId}`, { method: "DELETE" });
 }
 
 export async function createOperation(
@@ -98,9 +79,8 @@ export async function createOperation(
   setupId: number,
   payload: OperationCreate,
 ): Promise<Operation> {
-  return requestJson<Operation>(`${apiBase(partId)}/setups/${setupId}/operations`, {
+  return apiRequest<Operation>(`${apiBase(partId)}/setups/${setupId}/operations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
@@ -110,15 +90,14 @@ export async function updateOperation(
   operationId: number,
   payload: OperationUpdate,
 ): Promise<Operation> {
-  return requestJson<Operation>(`${apiBase(partId)}/operations/${operationId}`, {
+  return apiRequest<Operation>(`${apiBase(partId)}/operations/${operationId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
 }
 
 export async function deleteOperation(partId: number, operationId: number): Promise<void> {
-  await requestJson<void>(`${apiBase(partId)}/operations/${operationId}`, { method: "DELETE" });
+  await apiRequest<void>(`${apiBase(partId)}/operations/${operationId}`, { method: "DELETE" });
 }
 
 export async function reorderOperations(
@@ -126,9 +105,8 @@ export async function reorderOperations(
   setupId: number,
   operationIds: number[],
 ): Promise<Operation[]> {
-  return requestJson<Operation[]>(`${apiBase(partId)}/setups/${setupId}/operations/reorder`, {
+  return apiRequest<Operation[]>(`${apiBase(partId)}/setups/${setupId}/operations/reorder`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ operation_ids: operationIds }),
   });
 }
