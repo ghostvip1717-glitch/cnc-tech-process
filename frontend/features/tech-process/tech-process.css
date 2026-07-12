@@ -88,3 +88,71 @@
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
+
+.tech-process-operations {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e5e5;
+}
+
+.tech-process-operations h4,
+.tech-process-operation-form h5 {
+  margin: 0 0 0.75rem;
+}
+
+.tech-process-operations-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tech-process-operation-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.5rem;
+  background: #fafafa;
+}
+
+.tech-process-operation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tech-process-operation-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tech-process-operation-card label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.tech-process-operation-card input,
+.tech-process-operation-card select,
+.tech-process-operation-form input,
+.tech-process-operation-form select {
+  font: inherit;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+.tech-process-operation-form {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px dashed #ccc;
+  border-radius: 0.5rem;
+}
+
+.tech-process-operation-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}

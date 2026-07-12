@@ -8,3 +8,5 @@
 - 2026-07-12: этап 1 — catalog: catalog_items, CRUD API /api/v1/catalog, экран справочника (вкладки tool/plate/jaw, поиск)
 - 2026-07-12: этап 2 — parts: parts/part_photos, CRUD + upload фото в backend/uploads/, экраны списка и карточки
 - 2026-07-12: этап 3 — tech_process: tech_processes/setups, API /parts/{id}/tech-process, блок установов на карточке детали
+- 2026-07-12: этап 4 — operations: CRUD + reorder, таблица операций в установе, запрет удаления catalog item в ТП
+- 2026-07-12: этап 5 — assembly: GET /parts/{id}/required-items, блок «Нужно для изготовления»

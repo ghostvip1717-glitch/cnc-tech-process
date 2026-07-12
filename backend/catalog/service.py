@@ -10,6 +10,10 @@ class CatalogItemNotFoundError(Exception):
     pass
 
 
+class CatalogItemInUseError(Exception):
+    pass
+
+
 class CatalogService:
     def __init__(self, repository: CatalogRepository) -> None:
         self.repository = repository
@@ -76,4 +80,6 @@ class CatalogService:
 
     async def delete_item(self, item_id: int) -> None:
         item = await self.get_item(item_id)
+        if await self.repository.is_item_referenced(item_id):
+            raise CatalogItemInUseError
         await self.repository.delete(item)

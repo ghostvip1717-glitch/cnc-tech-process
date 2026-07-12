@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from catalog.models import CatalogItemType
 from catalog.repository import CatalogRepository
-from catalog.service import CatalogItemNotFoundError, CatalogNameConflictError, CatalogService
+from catalog.service import CatalogItemInUseError, CatalogItemNotFoundError, CatalogNameConflictError, CatalogService
 from core.database import get_db
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -112,3 +112,8 @@ async def delete_catalog_item(
         await service.delete_item(item_id)
     except CatalogItemNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Catalog item not found") from exc
+    except CatalogItemInUseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Catalog item is used in tech process and cannot be deleted",
+        ) from exc

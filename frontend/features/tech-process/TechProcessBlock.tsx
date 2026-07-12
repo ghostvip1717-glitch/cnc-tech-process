@@ -8,6 +8,7 @@ import {
   updateSetup,
   type TechProcess,
 } from "../../shared/api/tech-process";
+import { OperationsTable } from "./OperationsTable";
 import "./tech-process.css";
 
 interface TechProcessBlockProps {
@@ -63,6 +64,11 @@ export function TechProcessBlock({ partId }: TechProcessBlockProps) {
     }
   };
 
+  const reloadTechProcess = async () => {
+    const process = await getTechProcess(partId);
+    setTechProcess(process);
+  };
+
   const handleAddSetup = async () => {
     if (newJawId === "") {
       return;
@@ -73,8 +79,7 @@ export function TechProcessBlock({ partId }: TechProcessBlockProps) {
     try {
       await createSetup(partId, newJawId);
       setNewJawId("");
-      const process = await getTechProcess(partId);
-      setTechProcess(process);
+      await reloadTechProcess();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось добавить установ");
     } finally {
@@ -87,8 +92,7 @@ export function TechProcessBlock({ partId }: TechProcessBlockProps) {
     setError(null);
     try {
       await updateSetup(partId, setupId, jawId);
-      const process = await getTechProcess(partId);
-      setTechProcess(process);
+      await reloadTechProcess();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось обновить установ");
     } finally {
@@ -101,8 +105,7 @@ export function TechProcessBlock({ partId }: TechProcessBlockProps) {
     setError(null);
     try {
       await deleteSetup(partId, setupId);
-      const process = await getTechProcess(partId);
-      setTechProcess(process);
+      await reloadTechProcess();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось удалить установ");
     } finally {
@@ -169,6 +172,15 @@ export function TechProcessBlock({ partId }: TechProcessBlockProps) {
                   </select>
                 </label>
                 <p className="tech-process-empty">Выбрано: {jawName(setup.jaw_id)}</p>
+                <OperationsTable
+                  partId={partId}
+                  setupId={setup.id}
+                  operations={setup.operations}
+                  onChanged={reloadTechProcess}
+                  submitting={submitting}
+                  setSubmitting={setSubmitting}
+                  setError={setError}
+                />
               </div>
             ))
           )}

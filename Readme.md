@@ -76,6 +76,27 @@ curl -X POST http://localhost:8000/api/v1/parts/1/tech-process/setups \
 curl http://localhost:8000/api/v1/parts/1/tech-process
 ```
 
+## API операций (этап 4)
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | `/api/v1/parts/{id}/tech-process/setups/{setup_id}/operations` | `{op_number, title, tool_id, plate_id, comment?}` |
+| PATCH | `/api/v1/parts/{id}/tech-process/operations/{op_id}` | Изменение полей операции |
+| DELETE | `/api/v1/parts/{id}/tech-process/operations/{op_id}` | Удаление |
+| PATCH | `/api/v1/parts/{id}/tech-process/setups/{setup_id}/operations/reorder` | `{operation_ids: [...]}` |
+
+Позиции справочника, используемые в техпроцессе, удалить нельзя (409).
+
+## API сводки (этап 5)
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/api/v1/parts/{id}/required-items` | Уникальные инструмент, пластины, кулачки |
+
+```bash
+curl http://localhost:8000/api/v1/parts/1/required-items
+```
+
 ## API справочника (этап 1)
 
 | Метод | Путь | Описание |

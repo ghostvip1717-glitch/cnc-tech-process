@@ -8,6 +8,7 @@ import catalog.models  # noqa: F401 — register ORM models
 import parts.models  # noqa: F401 — register ORM models
 import tech_process.models  # noqa: F401 — register ORM models
 from catalog.router import router as catalog_router
+from assembly.router import router as assembly_router
 from core.config import settings
 from core.database import Base, engine
 from parts.router import router as parts_router
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(catalog_router, prefix=settings.api_v1_prefix)
 app.include_router(parts_router, prefix=settings.api_v1_prefix)
 app.include_router(tech_process_router, prefix=settings.api_v1_prefix)
+app.include_router(assembly_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

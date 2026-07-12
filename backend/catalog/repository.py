@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from catalog.models import CatalogItem, CatalogItemType
@@ -57,3 +57,19 @@ class CatalogRepository:
     async def delete(self, item: CatalogItem) -> None:
         await self.session.delete(item)
         await self.session.commit()
+
+    async def is_item_referenced(self, item_id: int) -> bool:
+        result = await self.session.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM setups WHERE jaw_id = :item_id
+                ) OR EXISTS (
+                    SELECT 1 FROM operations
+                    WHERE tool_id = :item_id OR plate_id = :item_id
+                )
+                """
+            ),
+            {"item_id": item_id},
+        )
+        return bool(result.scalar_one())

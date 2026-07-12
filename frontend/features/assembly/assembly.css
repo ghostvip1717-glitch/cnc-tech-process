@@ -1,0 +1,36 @@
+.assembly-block {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.75rem;
+  background: #fafafa;
+}
+
+.assembly-block h2 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+}
+
+.assembly-group {
+  margin-bottom: 1rem;
+}
+
+.assembly-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.assembly-group ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.assembly-empty {
+  color: #666;
+  margin: 0;
+}
+
+.assembly-error {
+  color: #b00020;
+  margin: 0;
+}

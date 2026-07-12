@@ -9,6 +9,7 @@ import {
   type Part,
 } from "../../shared/api/parts";
 import { TechProcessBlock } from "../tech-process/TechProcessBlock";
+import { AssemblyBlock } from "../assembly/AssemblyBlock";
 import "./parts.css";
 
 interface PartDetailPageProps {
@@ -240,6 +241,7 @@ export function PartDetailPage({ partId, onBack }: PartDetailPageProps) {
       )}
 
       <TechProcessBlock partId={partId} />
+      <AssemblyBlock partId={partId} />
     </section>
   );
 }
