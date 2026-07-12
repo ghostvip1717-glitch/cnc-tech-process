@@ -95,7 +95,7 @@ curl -i http://localhost:8000/api/v1/parts
 
 ### GitHub Pages (фронтенд)
 
-1. **Settings → Pages → Build and deployment → Source: GitHub Actions**
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions** (рекомендуется; если стоит *Deploy from branch*, в корне лежит собранный `index.html` + `.nojekyll`)
 2. Добавьте **Secrets** (Settings → Secrets and variables → Actions):
 
 | Secret | Назначение |
