@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 import catalog.models  # noqa: F401 — register ORM models
 import parts.models  # noqa: F401 — register ORM models
+import tech_process.models  # noqa: F401 — register ORM models
 from catalog.router import router as catalog_router
 from core.config import settings
 from core.database import Base, engine

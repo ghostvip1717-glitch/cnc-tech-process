@@ -57,6 +57,25 @@ curl -X POST http://localhost:8000/api/v1/parts/1/photos -F 'file=@photo.jpg;typ
 curl 'http://localhost:8000/api/v1/parts?q=В-204'
 ```
 
+## API техпроцесса (этап 3)
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/api/v1/parts/{id}/tech-process` | Техпроцесс с установами |
+| PUT | `/api/v1/parts/{id}/tech-process` | Создать техпроцесс |
+| POST | `/api/v1/parts/{id}/tech-process/setups` | `{jaw_id}` — добавить установ |
+| PATCH | `/api/v1/parts/{id}/tech-process/setups/{setup_id}` | `{jaw_id}` — сменить кулачки |
+| DELETE | `/api/v1/parts/{id}/tech-process/setups/{setup_id}` | Удалить установ |
+
+Проверка:
+
+```bash
+curl -X PUT http://localhost:8000/api/v1/parts/1/tech-process
+curl -X POST http://localhost:8000/api/v1/parts/1/tech-process/setups \
+  -H 'Content-Type: application/json' -d '{"jaw_id":2}'
+curl http://localhost:8000/api/v1/parts/1/tech-process
+```
+
 ## API справочника (этап 1)
 
 | Метод | Путь | Описание |

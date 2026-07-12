@@ -8,6 +8,7 @@ import {
   uploadPartPhoto,
   type Part,
 } from "../../shared/api/parts";
+import { TechProcessBlock } from "../tech-process/TechProcessBlock";
 import "./parts.css";
 
 interface PartDetailPageProps {
@@ -237,6 +238,8 @@ export function PartDetailPage({ partId, onBack }: PartDetailPageProps) {
           ))}
         </div>
       )}
+
+      <TechProcessBlock partId={partId} />
     </section>
   );
 }
