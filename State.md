@@ -1,3 +1,4 @@
 # State
 
 - 2026-07-12: создан IMPLEMENTATION_PLAN.md — поэтапный план Telegram Mini App (техпроцессы ЧПУ)
+- 2026-07-12: IMPLEMENTATION_PLAN.md в корне main на GitHub (ghostvip1717-glitch/cnc-tech-process)
