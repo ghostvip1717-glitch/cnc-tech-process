@@ -14,3 +14,5 @@
 
 - 2026-07-15: fix Drive photo upload — appsscript.json oauthScopes (spreadsheets+drive+script.container.ui); rebuild ONE_FILE.gs; SETUP/Readme: Allow Drive + New version
 - 2026-07-15: speed — FE GET cache 60s + invalidate on mutate; tabs keepMounted; warmup health+parts+catalog; search debounce 350ms; GAS CacheService sheetRows_ 45s + invalidate on write; ONE_FILE sync; Pages rebuild
+- 2026-07-15: policy — всегда мержить в main без спроса; Pages из main
+- 2026-07-15: merge speed-up → main (PR#13); Pages deploy; GAS ONE_FILE ещё руками New version
