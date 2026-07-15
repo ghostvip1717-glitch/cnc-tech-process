@@ -45,17 +45,18 @@
 | Property | Значение |
 |----------|----------|
 | `SPREADSHEET_ID` | `1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU` |
-| `DRIVE_PHOTOS_FOLDER_ID` | id папки Drive для фото (см. ниже) |
+| `DRIVE_PHOTOS_FOLDER_ID` | `1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC` |
 | `BOT_TOKEN` | токен BotFather |
 | `TELEGRAM_AUTH_ENABLED` | `false` (отладка) / `true` (прод) |
 | `TELEGRAM_ALLOWED_USER_IDS` | опционально, через запятую |
 
 ### Папка Drive для фото
 
-1. Google Drive → Создать папку `cnc-tech-process-photos`.
-2. Открыть папку → из URL скопировать id:  
-   `https://drive.google.com/drive/folders/ВАШ_ID`
-3. Записать в `DRIVE_PHOTOS_FOLDER_ID`.
+Готовая папка: https://drive.google.com/drive/folders/1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC
+
+ID: `1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC` → свойство `DRIVE_PHOTOS_FOLDER_ID`.
+
+Apps Script должен выполняться **от твоего имени** (Execute as: Me), чтобы писать файлы в эту папку.
 
 ---
 
