@@ -30,14 +30,19 @@ FastAPI/`backend/` — [архив](./backend/ARCHIVED.md). Render/Postgres/VPS 
 
 ## Деплой Apps Script (после правок кода)
 
-1. Таблица → **Расширения → Apps Script** → вставить файлы из `sheets-backend/` (см. [SETUP.md](./sheets-backend/SETUP.md)).
-2. Script Properties: `SPREADSHEET_ID`, `DRIVE_PHOTOS_FOLDER_ID`, `BOT_TOKEN`, `TELEGRAM_AUTH_ENABLED`.
-3. **Deploy → Manage deployments → Edit → Version: New version → Deploy**.
-4. GitHub Secret `VITE_API_URL` = URL `/exec` → **Actions → Deploy Frontend**.
+1. Таблица → **Расширения → Apps Script** → вставить [`ONE_FILE.gs`](./sheets-backend/ONE_FILE.gs) (или файлы из `sheets-backend/`, см. [SETUP.md](./sheets-backend/SETUP.md)).
+2. Включить манифест → вставить [`appsscript.json`](./sheets-backend/appsscript.json) с `oauthScopes` (`spreadsheets` + **`drive`** + `script.container.ui`) → **Сохранить**.
+3. При запросе прав → **Allow / разрешить доступ к Google Drive** (без этого upload фото → 500).
+4. Script Properties: `SPREADSHEET_ID`, `DRIVE_PHOTOS_FOLDER_ID`, `BOT_TOKEN`, `TELEGRAM_AUTH_ENABLED`.
+5. **Deploy → Manage deployments → Edit → Version: New version → Deploy**.
+6. GitHub Secret `VITE_API_URL` = URL `/exec` → **Actions → Deploy Frontend**.
 
 ### Папка фото Drive
 
-Создать папку `cnc-tech-process-photos` → id из URL → Property `DRIVE_PHOTOS_FOLDER_ID`.
+Готова: https://drive.google.com/drive/folders/1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC  
+Property: `DRIVE_PHOTOS_FOLDER_ID` = `1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC`.
+
+После New version: upload фото → файл в папке + строка в `part_photos`.
 
 ### Проверка
 
@@ -51,6 +56,7 @@ curl -sL -X POST "$WEB" -H "Content-Type: text/plain;charset=utf-8" \
   -d '{"path":"/api/v1/catalog","method":"POST","query":{},"body":{"type":"tool","name":"CNMG 120408"}}'
 ```
 
+Фото (после Allow Drive + New version): `POST` envelope `path=/api/v1/parts/{id}/photos`, body `{fileName,mimeType,contentBase64}` → `201` + файл в Drive.
 ---
 
 ## Frontend
@@ -84,6 +90,8 @@ npm run dev
 
 ```
 sheets-backend/
+├── ONE_FILE.gs          # весь API для вставки в GAS
+├── appsscript.json      # oauthScopes: spreadsheets + drive + ui
 ├── Code.gs
 ├── CONFIG.env
 ├── SETUP.md

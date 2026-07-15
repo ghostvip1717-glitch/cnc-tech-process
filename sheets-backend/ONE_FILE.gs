@@ -5,19 +5,22 @@
  * 1. Таблица → Расширения → Apps Script
  * 2. Удали весь старый код во всех файлах (оставь один файл Code)
  * 3. Вставь этот файл целиком → Сохранить (Ctrl+S)
- * 4. Параметры проекта → Свойства скрипта:
+ * 4. Project Settings → показать файл манифеста appsscript.json → вставить oauthScopes
+ *    (spreadsheets + drive + script.container.ui) из sheets-backend/appsscript.json
+ * 5. При запросе прав → Разрешить (включая Google Drive)
+ * 6. Параметры проекта → Свойства скрипта:
  *      SPREADSHEET_ID = 1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU
  *      DRIVE_PHOTOS_FOLDER_ID = 1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC
  *      TELEGRAM_AUTH_ENABLED = false
- * 5. Deploy → Управление развёртываниями → карандаш → Новая версия →
+ * 7. Deploy → Управление развёртываниями → карандаш → Новая версия →
  *      от моего имени / доступ: Все → Развернуть
- * 6. Проверка:
+ * 8. Проверка:
  *    .../exec?path=/health  →  {"ok":true,"httpStatus":200,"data":{"status":"OK"}}
+ *    POST /api/v1/parts/{id}/photos → 201 + файл в Drive
  *
  * Web App URL:
  * https://script.google.com/macros/s/AKfycbxD1AjO9kD26CNbEm_SyJoMjm1UkNYdh3kKleOFbc4WGnkQbLbB8oS_LLQ5AMOg1CzeUA/exec
  */
-
 
 // ===== core/Response.gs =====
 
@@ -53,7 +56,6 @@ function jsonOutput_(payload) {
     ContentService.MimeType.JSON,
   );
 }
-
 
 // ===== core/Auth.gs =====
 
@@ -210,7 +212,6 @@ function bytesToHex_(bytes) {
   }
   return hex.join('');
 }
-
 
 // ===== core/SheetStore.gs =====
 
@@ -473,7 +474,6 @@ function parseRequestEnvelope_(e) {
   };
 }
 
-
 // ===== catalog/CatalogRepository.gs =====
 
 /**
@@ -528,7 +528,6 @@ function catalogRepoFindByTypeAndName_(type, name) {
   }
   return null;
 }
-
 
 // ===== catalog/CatalogService.gs =====
 
@@ -660,7 +659,6 @@ function catalogGetByIdAndType_(itemId, expectedType) {
   return catalogSerialize_(item);
 }
 
-
 // ===== parts/PartsRepository.gs =====
 
 /**
@@ -728,7 +726,6 @@ function photosRepoUpdate_(rowNumber, row) {
 function photosRepoDelete_(rowNumber) {
   sheetDeleteRow_(SHEET_NAMES.PART_PHOTOS, rowNumber);
 }
-
 
 // ===== parts/PartsService.gs =====
 
@@ -854,7 +851,6 @@ function partsRequire_(partId) {
   }
   return part;
 }
-
 
 // ===== parts/Photos.gs =====
 
@@ -1015,7 +1011,6 @@ function photosDeleteAllForPart_(partId) {
   }
 }
 
-
 // ===== tech_process/TechProcessRepository.gs =====
 
 /**
@@ -1116,7 +1111,6 @@ function techProcessDeleteCascade_(tp) {
 
   techProcessRepoDelete_(tp.__row);
 }
-
 
 // ===== tech_process/TechProcessService.gs =====
 
@@ -1413,7 +1407,6 @@ function operationRequireForPart_(partId, operationId) {
   return op;
 }
 
-
 // ===== assembly/AssemblyService.gs =====
 
 /**
@@ -1461,7 +1454,6 @@ function assemblyResolveIds_(ids, expectedType) {
   });
   return items;
 }
-
 
 // ===== Code.gs =====
 
@@ -1624,7 +1616,6 @@ function routeRequest_(req) {
 
   throw new HttpError_(404, 'Not found: ' + method + ' ' + path);
 }
-
 
 // ===== setup/PrepareSpreadsheet.gs =====
 
@@ -1835,4 +1826,3 @@ function removeDefaultEmptySheets_(ss) {
     }
   });
 }
-
