@@ -1,4 +1,5 @@
 import { getTelegramInitData } from "../../telegram/init";
+import { cacheGet, cacheInvalidateAll, cacheKey, cacheSet } from "./cache";
 import { apiOrigin } from "./config";
 
 interface ApiEnvelopeSuccess<T> {
@@ -62,10 +63,32 @@ async function serializeBody(body: BodyInit | null | undefined): Promise<unknown
   throw new Error("Unsupported request body type");
 }
 
+async function postEnvelope<T>(envelope: {
+  path: string;
+  method: string;
+  query: Record<string, string>;
+  body: unknown;
+  initData: string | null;
+}): Promise<ApiEnvelope<T>> {
+  const response = await fetch(apiOrigin, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    body: JSON.stringify(envelope),
+    redirect: "follow",
+  });
+
+  try {
+    return (await response.json()) as ApiEnvelope<T>;
+  } catch {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+}
+
 /**
  * Единый транспорт к Apps Script Web App (/exec).
- * POST envelope: { path, method, query, body, initData }.
- * Content-Type text/plain — без CORS preflight; redirect: follow.
+ * GET читает из кэша (60с); мутации сбрасывают кэш.
  */
 export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
   if (!apiOrigin) {
@@ -76,6 +99,14 @@ export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T>
   const { path, query } = splitUrl(url);
   const body = await serializeBody(init?.body ?? null);
   const initData = getTelegramInitData() || null;
+  const key = cacheKey(path, query);
+
+  if (method === "GET") {
+    const cached = cacheGet<T>(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
 
   const envelope = {
     path,
@@ -85,33 +116,50 @@ export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T>
     initData,
   };
 
-  const response = await fetch(apiOrigin, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    body: JSON.stringify(envelope),
-    redirect: "follow",
-  });
-
-  let payload: ApiEnvelope<T>;
-  try {
-    payload = (await response.json()) as ApiEnvelope<T>;
-  } catch {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
+  const payload = await postEnvelope<T>(envelope);
 
   if (!payload.ok) {
     const message =
       typeof payload.detail === "string"
         ? payload.detail
-        : `Request failed with status ${payload.httpStatus ?? response.status}`;
+        : `Request failed with status ${payload.httpStatus}`;
     throw new Error(message);
   }
 
   if (payload.httpStatus === 204) {
+    cacheInvalidateAll();
     return undefined as T;
   }
 
+  if (method === "GET") {
+    cacheSet(key, payload.data);
+  } else {
+    cacheInvalidateAll();
+  }
+
   return payload.data;
+}
+
+/** Прогрев Apps Script + кэш списков при старте (фоном). */
+export function warmUpApi(): void {
+  if (!apiOrigin) {
+    return;
+  }
+  void (async () => {
+    try {
+      await postEnvelope({
+        path: "/health",
+        method: "GET",
+        query: {},
+        body: null,
+        initData: null,
+      });
+      await Promise.all([
+        apiRequest("/api/v1/parts"),
+        apiRequest("/api/v1/catalog"),
+      ]);
+    } catch {
+      // ignore warmup errors
+    }
+  })();
 }

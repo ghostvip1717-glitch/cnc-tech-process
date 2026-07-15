@@ -43,6 +43,31 @@ var META_COUNTERS = {
   operations: 'next_operation_id',
 };
 
+/** Кэш чтения листов (секунды) — меньше ждущих открытий Sheets на каждый клик. */
+var SHEET_CACHE_TTL_SEC = 45;
+
+function sheetCache_() {
+  return CacheService.getScriptCache();
+}
+
+function sheetCacheKey_(sheetName) {
+  return 'sheet_rows_v1_' + sheetName;
+}
+
+function sheetCacheInvalidate_(sheetName) {
+  try {
+    sheetCache_().remove(sheetCacheKey_(sheetName));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function sheetCacheInvalidateAll_() {
+  Object.keys(SHEET_HEADERS).forEach(function (name) {
+    sheetCacheInvalidate_(name);
+  });
+}
+
 function getSpreadsheetId_() {
   return getScriptProp_('SPREADSHEET_ID', DEFAULT_SPREADSHEET_ID);
 }
@@ -81,10 +106,12 @@ function sheetSetMeta_(key, value) {
   for (var i = 1; i < values.length; i++) {
     if (String(values[i][0]) === key) {
       sheet.getRange(i + 1, 2).setValue(value);
+      sheetCacheInvalidate_(SHEET_NAMES.META);
       return;
     }
   }
   sheet.appendRow([key, value]);
+  sheetCacheInvalidate_(SHEET_NAMES.META);
 }
 
 /**
@@ -105,6 +132,16 @@ function sheetNextId_(sheetName) {
 }
 
 function sheetRows_(sheetName) {
+  var cacheKey = sheetCacheKey_(sheetName);
+  try {
+    var cached = sheetCache_().get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    // ignore cache errors
+  }
+
   var sheet = getSheetByName_(sheetName);
   var values = sheet.getDataRange().getValues();
   if (values.length < 2) {
@@ -122,6 +159,12 @@ function sheetRows_(sheetName) {
       obj[headers[c]] = row[c];
     }
     rows.push(obj);
+  }
+
+  try {
+    sheetCache_().put(cacheKey, JSON.stringify(rows), SHEET_CACHE_TTL_SEC);
+  } catch (e2) {
+    // Cache quota / size — ignore
   }
   return rows;
 }
@@ -142,6 +185,7 @@ function sheetAppend_(sheetName, obj) {
     return obj[key] === undefined ? '' : obj[key];
   });
   getSheetByName_(sheetName).appendRow(row);
+  sheetCacheInvalidate_(sheetName);
 }
 
 function sheetUpdate_(sheetName, rowNumber, obj) {
@@ -150,10 +194,12 @@ function sheetUpdate_(sheetName, rowNumber, obj) {
     return obj[key] === undefined ? '' : obj[key];
   });
   getSheetByName_(sheetName).getRange(rowNumber, 1, 1, headers.length).setValues([values]);
+  sheetCacheInvalidate_(sheetName);
 }
 
 function sheetDeleteRow_(sheetName, rowNumber) {
   getSheetByName_(sheetName).deleteRow(rowNumber);
+  sheetCacheInvalidate_(sheetName);
 }
 
 function emptyToNull_(value) {

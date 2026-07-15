@@ -18,6 +18,7 @@ const TABS: { type: CatalogItemType; label: string }[] = [
 export function CatalogPage({ showHeading = true }: { showHeading?: boolean }) {
   const [activeType, setActiveType] = useState<CatalogItemType>("tool");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +27,18 @@ export function CatalogPage({ showHeading = true }: { showHeading?: boolean }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const loadItems = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await listCatalogItems({
         type: activeType,
-        q: search.trim() || undefined,
+        q: debouncedSearch || undefined,
       });
       setItems(data);
     } catch (err) {
@@ -40,7 +46,7 @@ export function CatalogPage({ showHeading = true }: { showHeading?: boolean }) {
     } finally {
       setLoading(false);
     }
-  }, [activeType, search]);
+  }, [activeType, debouncedSearch]);
 
   useEffect(() => {
     void loadItems();

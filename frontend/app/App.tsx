@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { initTelegramWebApp } from "../telegram/init";
 import { CatalogPage } from "../features/catalog/CatalogPage";
 import { PartDetailPage } from "../features/parts/PartDetailPage";
+import { warmUpApi } from "../shared/api/client";
 import { AppLayout, type AppTab } from "./AppLayout";
 import { HomePage } from "./HomePage";
 import "./app.css";
@@ -12,6 +13,7 @@ export function App() {
 
   useEffect(() => {
     initTelegramWebApp();
+    warmUpApi();
   }, []);
 
   const openPart = (partId: number) => {
@@ -27,6 +29,8 @@ export function App() {
   };
 
   const isPartDetail = tab === "parts" && selectedPartId !== null;
+  const showPartsList = tab === "parts" && selectedPartId === null;
+  const showCatalog = tab === "catalog";
 
   const title = isPartDetail
     ? "Карточка детали"
@@ -42,13 +46,18 @@ export function App() {
       showBack={isPartDetail}
       onBack={() => setSelectedPartId(null)}
     >
-      {tab === "parts" && selectedPartId === null && (
+      {/* Держим экраны смонтированными — без повторной загрузки при каждом клике */}
+      <div style={{ display: showPartsList ? "block" : "none" }}>
         <HomePage onOpenPart={openPart} onOpenCatalog={() => setTab("catalog")} />
+      </div>
+      {selectedPartId !== null && (
+        <div style={{ display: isPartDetail ? "block" : "none" }}>
+          <PartDetailPage partId={selectedPartId} onBack={() => setSelectedPartId(null)} />
+        </div>
       )}
-      {isPartDetail && (
-        <PartDetailPage partId={selectedPartId} onBack={() => setSelectedPartId(null)} />
-      )}
-      {tab === "catalog" && <CatalogPage showHeading={false} />}
+      <div style={{ display: showCatalog ? "block" : "none" }}>
+        <CatalogPage showHeading={false} />
+      </div>
     </AppLayout>
   );
 }

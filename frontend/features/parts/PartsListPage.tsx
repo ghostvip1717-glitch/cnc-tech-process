@@ -10,6 +10,7 @@ interface PartsListPageProps {
 export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageProps) {
   const [parts, setParts] = useState<Part[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -17,18 +18,23 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
   const [title, setTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const loadParts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await listParts(search.trim() || undefined);
+      const data = await listParts(debouncedSearch || undefined);
       setParts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось загрузить детали");
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     void loadParts();
