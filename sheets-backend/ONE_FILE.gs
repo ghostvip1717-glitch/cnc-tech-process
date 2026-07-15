@@ -1826,3 +1826,16 @@ function removeDefaultEmptySheets_(ss) {
     }
   });
 }
+
+
+/**
+ * Запустить один раз из редактора (выбрать authorizeDrive → Выполнить),
+ * чтобы Google выдал право ПИСАТЬ на Диск (createFile), не только читать.
+ * Потом: веб-приложение → Новая версия.
+ */
+function authorizeDrive() {
+  var folderId = '1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC';
+  var folder = DriveApp.getFolderById(folderId);
+  var file = folder.createFile('auth-test.txt', 'ok', MimeType.PLAIN_TEXT);
+  file.setTrashed(true);
+}
