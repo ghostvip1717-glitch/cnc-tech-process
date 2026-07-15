@@ -1,12 +1,21 @@
 /**
- * Catalog module: tools, plates, jaws.
+ * Catalog business rules and HTTP handlers.
  */
+
+function catalogSerialize_(row) {
+  return {
+    id: toInt_(row.id),
+    type: String(row.type),
+    name: String(row.name),
+    note: emptyToNull_(row.note),
+  };
+}
 
 function catalogList_(query) {
   var typeFilter = query && query.type ? String(query.type) : null;
   var q = query && query.q ? String(query.q).toLowerCase() : null;
-  var items = rowsToObjects_(SHEET_NAMES.CATALOG)
-    .map(serializeCatalogItem_)
+  var items = catalogRepoList_()
+    .map(catalogSerialize_)
     .filter(function (item) {
       if (typeFilter && item.type !== typeFilter) {
         return false;
@@ -23,11 +32,11 @@ function catalogList_(query) {
 }
 
 function catalogGet_(itemId) {
-  var item = findById_(SHEET_NAMES.CATALOG, itemId);
+  var item = catalogRepoFindById_(itemId);
   if (!item) {
     throw new HttpError_(404, 'Catalog item not found');
   }
-  return okResponse_(serializeCatalogItem_(item));
+  return okResponse_(catalogSerialize_(item));
 }
 
 function catalogCreate_(body) {
@@ -46,22 +55,18 @@ function catalogCreate_(body) {
   if (note && note.length > 1000) {
     throw new HttpError_(422, 'note is too long');
   }
-
-  var existing = rowsToObjects_(SHEET_NAMES.CATALOG);
-  for (var i = 0; i < existing.length; i++) {
-    if (String(existing[i].type) === type && String(existing[i].name) === name) {
-      throw new HttpError_(409, 'Item with this name already exists for type ' + type);
-    }
+  if (catalogRepoFindByTypeAndName_(type, name)) {
+    throw new HttpError_(409, 'Item with this name already exists for type ' + type);
   }
 
-  var id = nextId_(SHEET_NAMES.CATALOG);
+  var id = sheetNextId_(SHEET_NAMES.CATALOG);
   var row = { id: id, type: type, name: name, note: note === null ? '' : note };
-  appendObject_(SHEET_NAMES.CATALOG, row);
-  return okResponse_(serializeCatalogItem_(row), 201);
+  catalogRepoInsert_(row);
+  return okResponse_(catalogSerialize_(row), 201);
 }
 
 function catalogUpdate_(itemId, body) {
-  var item = findById_(SHEET_NAMES.CATALOG, itemId);
+  var item = catalogRepoFindById_(itemId);
   if (!item) {
     throw new HttpError_(404, 'Catalog item not found');
   }
@@ -73,6 +78,7 @@ function catalogUpdate_(itemId, body) {
   if (!name || name.length > 255) {
     throw new HttpError_(422, 'Invalid name');
   }
+
   var note;
   if (body.note === undefined) {
     note = emptyToNull_(item.note);
@@ -85,15 +91,9 @@ function catalogUpdate_(itemId, body) {
     }
   }
 
-  var existing = rowsToObjects_(SHEET_NAMES.CATALOG);
-  for (var i = 0; i < existing.length; i++) {
-    if (
-      Number(existing[i].id) !== Number(itemId) &&
-      String(existing[i].type) === String(item.type) &&
-      String(existing[i].name) === name
-    ) {
-      throw new HttpError_(409, 'Item with this name already exists for type ' + item.type);
-    }
+  var conflict = catalogRepoFindByTypeAndName_(String(item.type), name);
+  if (conflict && Number(conflict.id) !== Number(itemId)) {
+    throw new HttpError_(409, 'Item with this name already exists for type ' + item.type);
   }
 
   var updated = {
@@ -102,54 +102,26 @@ function catalogUpdate_(itemId, body) {
     name: name,
     note: note === null ? '' : note,
   };
-  updateObject_(SHEET_NAMES.CATALOG, item.__row, updated);
-  return okResponse_(serializeCatalogItem_(updated));
+  catalogRepoUpdate_(item.__row, updated);
+  return okResponse_(catalogSerialize_(updated));
 }
 
 function catalogDelete_(itemId) {
-  var item = findById_(SHEET_NAMES.CATALOG, itemId);
+  var item = catalogRepoFindById_(itemId);
   if (!item) {
     throw new HttpError_(404, 'Catalog item not found');
   }
-  if (isCatalogItemReferenced_(itemId)) {
+  if (catalogRepoIsReferenced_(itemId)) {
     throw new HttpError_(409, 'Catalog item is used in tech process and cannot be deleted');
   }
-  deleteRow_(SHEET_NAMES.CATALOG, item.__row);
+  catalogRepoDelete_(item.__row);
   return okResponse_(null, 204);
 }
 
-function isCatalogItemReferenced_(itemId) {
-  var setups = rowsToObjects_(SHEET_NAMES.SETUPS);
-  for (var i = 0; i < setups.length; i++) {
-    if (Number(setups[i].jaw_id) === Number(itemId)) {
-      return true;
-    }
-  }
-  var operations = rowsToObjects_(SHEET_NAMES.OPERATIONS);
-  for (var j = 0; j < operations.length; j++) {
-    if (
-      Number(operations[j].tool_id) === Number(itemId) ||
-      Number(operations[j].plate_id) === Number(itemId)
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function getCatalogItemByIdAndType_(itemId, expectedType) {
-  var item = findById_(SHEET_NAMES.CATALOG, itemId);
+function catalogGetByIdAndType_(itemId, expectedType) {
+  var item = catalogRepoFindById_(itemId);
   if (!item || String(item.type) !== expectedType) {
     return null;
   }
-  return serializeCatalogItem_(item);
-}
-
-function serializeCatalogItem_(row) {
-  return {
-    id: toInt_(row.id),
-    type: String(row.type),
-    name: String(row.name),
-    note: emptyToNull_(row.note),
-  };
+  return catalogSerialize_(item);
 }

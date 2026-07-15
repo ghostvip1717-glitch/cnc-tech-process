@@ -43,15 +43,19 @@
 
 ```
 sheets-backend/
-├── Core.gs               # конфиг, auth, envelope, ошибки
-├── SheetsStore.gs        # листы, meta id
-├── Catalog.gs
-├── Parts.gs              # + Drive фото
-├── TechProcess.gs
-├── Assembly.gs
-├── InitSheets.gs
-└── Code.gs               # doGet/doPost, роутинг
+├── Code.gs                      # doGet/doPost, роутинг
+├── setup/PrepareSpreadsheet.gs  # структура листов + meta next_*_id
+├── core/
+│   ├── Auth.gs                  # Telegram initData
+│   ├── SheetStore.gs            # листы, nextId из meta
+│   └── Response.gs              # JSON envelope
+├── catalog/   CatalogRepository.gs + CatalogService.gs
+├── parts/     PartsRepository.gs + PartsService.gs + Photos.gs (Drive)
+├── tech_process/  TechProcessRepository.gs + TechProcessService.gs
+└── assembly/  AssemblyService.gs
 ```
+
+Таблица и Web App URL: см. `sheets-backend/CONFIG.env`.
 
 - Удалить `assembly` — детали и техпроцесс работают сами.
 - Добавить `history` — отдельная папка, не трогает `tech_process`.

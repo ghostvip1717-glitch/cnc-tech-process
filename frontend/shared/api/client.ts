@@ -63,9 +63,9 @@ async function serializeBody(body: BodyInit | null | undefined): Promise<unknown
 }
 
 /**
- * Единый транспорт к Google Apps Script Web App.
- * Все вызовы → POST на VITE_API_URL с envelope { path, method, query, body, telegramInitData }.
- * Content-Type text/plain — без CORS preflight.
+ * Единый транспорт к Apps Script Web App (/exec).
+ * POST envelope: { path, method, query, body, initData }.
+ * Content-Type text/plain — без CORS preflight; redirect: follow.
  */
 export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T> {
   if (!apiOrigin) {
@@ -75,17 +75,14 @@ export async function apiRequest<T>(url: string, init?: RequestInit): Promise<T>
   const method = (init?.method ?? "GET").toUpperCase();
   const { path, query } = splitUrl(url);
   const body = await serializeBody(init?.body ?? null);
-  const telegramInitData = getTelegramInitData() || null;
+  const initData = getTelegramInitData() || null;
 
   const envelope = {
     path,
     method,
     query,
     body,
-    telegramInitData,
-    headers: telegramInitData
-      ? { "X-Telegram-Init-Data": telegramInitData }
-      : {},
+    initData,
   };
 
   const response = await fetch(apiOrigin, {

@@ -1,20 +1,18 @@
 /**
- * Web App entrypoints and route table.
+ * Web App entry: doGet / doPost + router.
  *
- * Deploy: Deploy → New deployment → Web app
- *   Execute as: Me
- *   Who has access: Anyone
+ * HTTP contract (единственный формат):
+ *   GET  .../exec?path=/health
+ *   POST .../exec  Content-Type: text/plain
+ *   {
+ *     "path": "/api/v1/catalog",
+ *     "method": "GET",
+ *     "query": { "type": "tool" },
+ *     "body": null,
+ *     "initData": "..."
+ *   }
  *
- * Request envelope (POST, Content-Type: text/plain):
- * {
- *   "path": "/api/v1/catalog",
- *   "method": "GET",
- *   "query": { "type": "tool" },
- *   "body": null,
- *   "telegramInitData": "..."
- * }
- *
- * Response envelope (HTTP always 200 from GAS):
+ * Response envelope:
  *   { "ok": true, "httpStatus": 200, "data": ... }
  *   { "ok": false, "httpStatus": 401, "detail": "..." }
  */
@@ -30,10 +28,7 @@ function doPost(e) {
 function handleRequest_(e) {
   try {
     var req = parseRequestEnvelope_(e);
-    requireAuth_(req.path, req.telegramInitData);
-    if (req.path !== '/health') {
-      ensureSheetsInitialized_();
-    }
+    requireAuth_(req.path, req.initData);
     var result = routeRequest_(req);
     return jsonOutput_(result);
   } catch (err) {
@@ -96,15 +91,15 @@ function routeRequest_(req) {
 
   params = matchPath_('/api/v1/parts/{partId}/photos', path);
   if (params && method === 'POST') {
-    return partsUploadPhoto_(params.partId, body);
+    return photosUpload_(params.partId, body);
   }
   params = matchPath_('/api/v1/parts/{partId}/photos/reorder', path);
   if (params && method === 'PATCH') {
-    return partsReorderPhotos_(params.partId, body);
+    return photosReorder_(params.partId, body);
   }
   params = matchPath_('/api/v1/parts/{partId}/photos/{photoId}', path);
   if (params && method === 'DELETE') {
-    return partsDeletePhoto_(params.partId, params.photoId);
+    return photosDelete_(params.partId, params.photoId);
   }
 
   params = matchPath_('/api/v1/parts/{partId}/tech-process', path);
