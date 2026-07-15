@@ -9,5 +9,6 @@
 - 2026-07-15: merge sheets backend в main; фронт с DEFAULT/VITE_API_URL → Apps Script /exec; sync Pages static
 - 2026-07-15: audit — Pages+API OK; ТП/операции/assembly OK; фото Drive 500 (нет oauthScopes); auth prod+BotFather, этапы 8–9 открыты
 - 2026-07-15: oauthScopes drive в манифесте смержены; upload всё ещё 500 на createFile — нужен authorizeDrive с createFile + Allow write
+- 2026-07-15: фото переведены на Drive API (UrlFetch+OAuth); scope script.external_request; ONE_FILE пересобран
 
 - 2026-07-15: fix Drive photo upload — appsscript.json oauthScopes (spreadsheets+drive+script.container.ui); rebuild ONE_FILE.gs; SETUP/Readme: Allow Drive + New version

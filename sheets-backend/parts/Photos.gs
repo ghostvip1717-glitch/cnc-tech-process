@@ -1,10 +1,16 @@
 /**
- * Drive photo upload/delete.
+ * Drive photo upload/delete via Drive API + OAuth token.
+ * Обход Access denied: DriveApp в Web App.
  * Script Properties: DRIVE_PHOTOS_FOLDER_ID
+ * Нужны scopes: drive + script.external_request
  */
 
 function getDrivePhotosFolderId_() {
   return getScriptProp_('DRIVE_PHOTOS_FOLDER_ID', '');
+}
+
+function getDriveOAuthToken_() {
+  return ScriptApp.getOAuthToken();
 }
 
 function photosSerialize_(row) {
@@ -29,6 +35,117 @@ function extractDriveFileId_(fileUrl) {
   }
   match = String(fileUrl).match(/\/d\/([a-zA-Z0-9_-]+)/);
   return match ? match[1] : '';
+}
+
+/**
+ * Создаёт файл в папке Drive через multipart upload (Drive API v3).
+ * @return {{id:string}}
+ */
+function driveApiCreateFile_(folderId, fileName, mimeType, bytes) {
+  var boundary = 'cnc_boundary_' + Date.now();
+  var delimiter = '--' + boundary + '\r\n';
+  var closeDelim = '\r\n--' + boundary + '--';
+  var metadata = {
+    name: fileName,
+    parents: [folderId],
+  };
+  var body =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    '\r\n' +
+    delimiter +
+    'Content-Type: ' +
+    mimeType +
+    '\r\n' +
+    'Content-Transfer-Encoding: base64\r\n\r\n' +
+    Utilities.base64Encode(bytes) +
+    closeDelim;
+
+  var response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+    {
+      method: 'post',
+      contentType: 'multipart/related; boundary=' + boundary,
+      headers: {
+        Authorization: 'Bearer ' + getDriveOAuthToken_(),
+      },
+      payload: body,
+      muteHttpExceptions: true,
+    },
+  );
+
+  var code = response.getResponseCode();
+  var text = response.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new HttpError_(500, 'Drive upload failed (' + code + '): ' + text);
+  }
+  return JSON.parse(text);
+}
+
+function driveApiAnyoneWithLink_(fileId) {
+  var response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files/' +
+      encodeURIComponent(fileId) +
+      '/permissions',
+    {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + getDriveOAuthToken_(),
+      },
+      payload: JSON.stringify({
+        role: 'reader',
+        type: 'anyone',
+      }),
+      muteHttpExceptions: true,
+    },
+  );
+  var code = response.getResponseCode();
+  if (code < 200 || code >= 300) {
+    // не блокируем upload, если шаринг не прошёл
+    Logger.log('Drive permission warn: ' + response.getContentText());
+  }
+}
+
+function driveApiTrashFile_(fileId) {
+  var response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId),
+    {
+      method: 'patch',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + getDriveOAuthToken_(),
+      },
+      payload: JSON.stringify({ trashed: true }),
+      muteHttpExceptions: true,
+    },
+  );
+  var code = response.getResponseCode();
+  if (code < 200 || code >= 300) {
+    Logger.log('Drive trash warn: ' + response.getContentText());
+  }
+}
+
+function driveApiGetFolder_(folderId) {
+  var response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files/' +
+      encodeURIComponent(folderId) +
+      '?fields=id,name,mimeType',
+    {
+      method: 'get',
+      headers: {
+        Authorization: 'Bearer ' + getDriveOAuthToken_(),
+      },
+      muteHttpExceptions: true,
+    },
+  );
+  var code = response.getResponseCode();
+  var text = response.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new HttpError_(500, 'Drive folder access failed (' + code + '): ' + text);
+  }
+  return JSON.parse(text);
 }
 
 function photosUpload_(partId, body) {
@@ -56,13 +173,16 @@ function photosUpload_(partId, body) {
     throw new HttpError_(500, 'DRIVE_PHOTOS_FOLDER_ID is not configured');
   }
 
-  var folder = DriveApp.getFolderById(folderId);
+  // проверка доступа к папке через Drive API (не DriveApp)
+  driveApiGetFolder_(folderId);
+
   var bytes = Utilities.base64Decode(body.contentBase64);
-  var fileName = body.fileName ? String(body.fileName) : 'part-' + partId + '-' + Date.now() + ext;
-  var blob = Utilities.newBlob(bytes, mimeType, fileName);
-  var file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  var fileUrl = 'https://drive.google.com/uc?export=view&id=' + file.getId();
+  var fileName = body.fileName
+    ? String(body.fileName)
+    : 'part-' + partId + '-' + Date.now() + ext;
+  var created = driveApiCreateFile_(folderId, fileName, mimeType, bytes);
+  driveApiAnyoneWithLink_(created.id);
+  var fileUrl = 'https://drive.google.com/uc?export=view&id=' + created.id;
 
   var photos = photosRepoListByPart_(partId);
   var sortOrder = 0;
@@ -137,7 +257,7 @@ function trashDriveFileByUrl_(fileUrl) {
     return;
   }
   try {
-    DriveApp.getFileById(fileId).setTrashed(true);
+    driveApiTrashFile_(fileId);
   } catch (e) {
     // ignore missing file
   }
@@ -153,4 +273,20 @@ function photosDeleteAllForPart_(partId) {
     trashDriveFileByUrl_(photos[i].file_url);
     photosRepoDelete_(photos[i].__row);
   }
+}
+
+/**
+ * Запустить один раз: authorizeDrive → Выполнить → Allow.
+ * Потом веб-приложение → Новая версия.
+ */
+function authorizeDrive() {
+  var folderId = getDrivePhotosFolderId_() || '1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC';
+  driveApiGetFolder_(folderId);
+  var created = driveApiCreateFile_(
+    folderId,
+    'auth-test.txt',
+    'text/plain',
+    Utilities.newBlob('ok', 'text/plain').getBytes(),
+  );
+  driveApiTrashFile_(created.id);
 }

@@ -83,11 +83,12 @@ Apps Script должен выполняться **от твоего имени**
 "oauthScopes": [
   "https://www.googleapis.com/auth/spreadsheets",
   "https://www.googleapis.com/auth/drive",
-  "https://www.googleapis.com/auth/script.container.ui"
+  "https://www.googleapis.com/auth/script.container.ui",
+  "https://www.googleapis.com/auth/script.external_request"
 ]
 ```
 
-`drive` нужен для `DriveApp.getFolderById` / createFile / trash. После смены scopes **обязательно** заново подтвердить права и сделать **New version**.
+`drive` + `script.external_request` нужны для загрузки фото через **Drive API** (UrlFetch), не через `DriveApp` (у Web App часто Access denied). После смены scopes **обязательно** заново подтвердить права и сделать **New version**.
 
 ---
 

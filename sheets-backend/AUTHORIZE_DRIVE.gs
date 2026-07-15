@@ -1,10 +1,15 @@
 /**
- * Вставь в конец Code.gs, выбери authorizeDrive → Выполнить → Разрешить (Диск).
- * Затем веб-приложение → Новая версия.
+ * Уже есть в ONE_FILE.gs / Photos.gs.
+ * Выбери authorizeDrive → Выполнить → Allow → New version Web App.
  */
 function authorizeDrive() {
-  var folderId = '1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC';
-  var folder = DriveApp.getFolderById(folderId);
-  var file = folder.createFile('auth-test.txt', 'ok', MimeType.PLAIN_TEXT);
-  file.setTrashed(true);
+  var folderId = getDrivePhotosFolderId_() || '1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC';
+  driveApiGetFolder_(folderId);
+  var created = driveApiCreateFile_(
+    folderId,
+    'auth-test.txt',
+    'text/plain',
+    Utilities.newBlob('ok', 'text/plain').getBytes(),
+  );
+  driveApiTrashFile_(created.id);
 }
