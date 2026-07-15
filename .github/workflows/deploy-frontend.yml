@@ -6,6 +6,9 @@ on:
     paths:
       - "frontend/**"
       - "docs/**"
+      - "index.html"
+      - "assets/**"
+      - ".nojekyll"
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
@@ -39,7 +42,7 @@ jobs:
         working-directory: frontend
         env:
           VITE_BASE_PATH: /cnc-tech-process/
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL != '' && secrets.VITE_API_URL || 'https://script.google.com/macros/s/AKfycbxD1AjO9kD26CNbEm_SyJoMjm1UkNYdh3kKleOFbc4WGnkQbLbB8oS_LLQ5AMOg1CzeUA/exec' }}
         run: |
           npm ci
           npm run build

@@ -6,3 +6,4 @@
 - 2026-07-15: sheets-backend API модули (Code/core/catalog/parts/tech_process/assembly); контракт POST envelope path/method/query/body/initData; meta next_*_id; DRIVE_PHOTOS_FOLDER_ID; фронт client.ts → VITE_API_URL=/exec; FastAPI=архив
 - 2026-07-15: DRIVE_PHOTOS_FOLDER_ID=1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC
 - 2026-07-15: sheets-backend/ONE_FILE.gs — весь API одним файлом для вставки в Apps Script
+- 2026-07-15: merge sheets backend в main; фронт с DEFAULT/VITE_API_URL → Apps Script /exec; sync Pages static
