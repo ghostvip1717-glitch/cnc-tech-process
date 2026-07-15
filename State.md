@@ -16,3 +16,4 @@
 - 2026-07-12: fix Pages — статика Mini App в корне + docs/ (.nojekyll), merge stage-10 в main
 - 2026-07-12: render.yaml для API; workflow синхронизирует статику с VITE_API_URL
 - 2026-07-15: sheets-backend/setup/PrepareSpreadsheet.gs — подготовка листов для таблицы 1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU
+- 2026-07-15: Web App URL: https://script.google.com/macros/s/AKfycbxD1AjO9kD26CNbEm_SyJoMjm1UkNYdh3kKleOFbc4WGnkQbLbB8oS_LLQ5AMOg1CzeUA/exec
