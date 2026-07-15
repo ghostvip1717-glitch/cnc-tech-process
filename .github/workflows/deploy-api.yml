@@ -1,16 +1,18 @@
-name: Deploy API
+# Устарело для MVP: прод API = Google Apps Script (sheets-backend/).
+# Workflow оставлен только для компиляции архивного FastAPI в backend/.
+
+name: Deploy API (archived FastAPI)
 
 on:
   push:
     branches: [main]
     paths:
       - "backend/**"
-      - "docker-compose.yml"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
 jobs:
-  verify:
+  verify-archived:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,26 +28,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r backend/requirements.txt
 
-      - name: Compile backend
+      - name: Compile archived backend
         run: python -m compileall backend
 
-      - name: Import smoke test
-        working-directory: backend
-        env:
-          TELEGRAM_AUTH_ENABLED: "false"
-        run: python -c "from main import app; assert app.title"
-
-  deploy:
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger external API deploy
-        env:
-          WEBHOOK_URL: ${{ secrets.API_DEPLOY_WEBHOOK_URL }}
-        run: |
-          if [ -z "$WEBHOOK_URL" ]; then
-            echo "API_DEPLOY_WEBHOOK_URL is not set — verify passed, external deploy skipped"
-            echo "Host API outside GitHub Pages (Render/Fly/Railway/VPS) and set the webhook secret."
-            exit 0
-          fi
-          curl -fsSL -X POST "$WEBHOOK_URL"
+      - name: Note
+        run: echo "Production API is sheets-backend (Apps Script). FastAPI archive compile-only."

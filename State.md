@@ -15,3 +15,4 @@
 - 2026-07-12: этап 10 — GitHub Actions deploy-frontend (Pages) + deploy-api, VITE_BASE_PATH=/cnc-tech-process/, backend/Dockerfile
 - 2026-07-12: fix Pages — статика Mini App в корне + docs/ (.nojekyll), merge stage-10 в main
 - 2026-07-12: render.yaml для API; workflow синхронизирует статику с VITE_API_URL
+- 2026-07-15: backend prod → Google Sheets + Apps Script + Drive (`sheets-backend/`); FastAPI `backend/` = архив; фронт client.ts = единый POST envelope на VITE_API_URL; auth/Script Properties; обновлены Readme/State/план

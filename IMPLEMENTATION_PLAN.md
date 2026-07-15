@@ -8,6 +8,9 @@
 
 **Telegram Mini App** — это обычное веб-приложение, которое открывается внутри Telegram. Пользователь заходит через бота (кнопка «Открыть»), видит интерфейс: детали → техпроцесс → справочник инструмента.
 
+**Хранилище (прод):** Google Sheets (таблицы) + Google Apps Script (API Web App) + Google Drive (фото).  
+Отдельный FastAPI/PostgreSQL/VPS для MVP **не нужны**. Модули и контракты те же; меняется только реализация хранилища.
+
 **Не входит в объём:**
 
 - учёт смен, статусов, склада;
@@ -21,13 +24,13 @@
 ### 2.1. Слои (снизу вверх)
 
 ```
-[База данных]
+[Google Sheets + Drive]
       ↑
-[Репозитории]     — только чтение/запись в БД, без бизнес-логики
+[Репозитории / SheetsStore]  — только чтение/запись, без бизнес-логики
       ↑
 [Сервисы]         — правила: «у детали один техпроцесс», порядок операций
       ↑
-[API (роуты)]     — HTTP-запросы, вызов сервисов
+[API (Apps Script)] — HTTP envelope → модули catalog/parts/tech_process/assembly
       ↑
 [Фронтенд-модули] — экраны по разделам: детали, техпроцесс, инструмент
 ```
@@ -36,28 +39,18 @@
 
 ### 2.2. Модули бэкенда (отдельные папки)
 
+Прод: `sheets-backend/` (Apps Script). Архив FastAPI: `backend/`.
+
 ```
-backend/
-├── core/                 # конфиг, подключение к БД, общие ошибки
-├── catalog/              # справочник: инструмент, пластины, кулачки
-│   ├── models.py
-│   ├── repository.py
-│   ├── service.py
-│   └── router.py
-├── parts/                # детали + фото
-│   ├── models.py
-│   ├── repository.py
-│   ├── service.py
-│   ├── storage.py        # загрузка фото
-│   └── router.py
-├── tech_process/         # установы, операции
-│   ├── models.py
-│   ├── repository.py
-│   ├── service.py
-│   └── router.py
-├── assembly/             # сводка «что нужно для детали» (читает tech_process + catalog)
-│   └── service.py
-└── main.py               # только подключение роутеров, без логики
+sheets-backend/
+├── Core.gs               # конфиг, auth, envelope, ошибки
+├── SheetsStore.gs        # листы, meta id
+├── Catalog.gs
+├── Parts.gs              # + Drive фото
+├── TechProcess.gs
+├── Assembly.gs
+├── InitSheets.gs
+└── Code.gs               # doGet/doPost, роутинг
 ```
 
 - Удалить `assembly` — детали и техпроцесс работают сами.
@@ -103,7 +96,7 @@ frontend/
 
 **Фото детали (`part_photos`):**
 
-- `id`, `part_id`, `file_path` / `url`, `sort_order`
+- `id`, `part_id`, `file_url` (Drive), `sort_order` (+ `drive_file_id` в Sheets)
 
 **Техпроцесс (`tech_processes`):**
 
@@ -127,13 +120,13 @@ frontend/
 
 **Делаем:**
 
-- репозиторий: `backend/`, `frontend/`;
-- `core`: конфиг, подключение к PostgreSQL, health-check `GET /health`;
+- репозиторий: `sheets-backend/`, `frontend/` (архив FastAPI — `backend/`);
+- Apps Script `core`: Script Properties, health-check `GET /health` → `{status:"OK"}`;
 - фронт: заглушка «Техпроцессы ЧПУ», подключение Telegram WebApp SDK.
 
-**Проверка:** проект запускается локально, фронт показывает заглушку, `GET /health` → OK.
+**Проверка:** Web App отвечает на health, фронт показывает заглушку.
 
-**Файлы:** `core/config.py`, `core/database.py`, `main.py`, `frontend/app/App.tsx`, `telegram/init.ts`.
+**Файлы:** `sheets-backend/Core.gs`, `Code.gs`, `frontend/app/App.tsx`, `telegram/init.ts`.
 
 **Не делаем:** детали, инструмент, техпроцесс.
 
@@ -152,7 +145,7 @@ frontend/
 
 **Проверка:** добавил «CNMG 120408» и «Кулачки высота 15» — они в списке, поиск находит.
 
-**Модули:** только `backend/catalog/*`, `frontend/features/catalog/*`.
+**Модули:** только `sheets-backend/Catalog.gs`, `frontend/features/catalog/*`.
 
 **Изоляция:** другие этапы не трогаем.
 
@@ -172,7 +165,7 @@ frontend/
 
 **Проверка:** создал «В-204 Втулка», загрузил 2 фото — всё отображается.
 
-**Модули:** `backend/parts/*`, `frontend/features/parts/*`.
+**Модули:** `sheets-backend/Parts.gs`, `frontend/features/parts/*`.
 
 **Зависимости:** только Этап 0. От `catalog` и `tech_process` не зависит.
 
@@ -190,7 +183,7 @@ frontend/
 
 **Проверка:** у В-204 два установа, у каждого указаны кулачки.
 
-**Модули:** `backend/tech_process/*`, `frontend/features/tech-process/` (только установы).
+**Модули:** `sheets-backend/TechProcess.gs`, `frontend/features/tech-process/` (только установы).
 
 **Зависимости:** Этап 1 (кулачки), Этап 2 (деталь). Операции — следующий этап.
 
@@ -228,7 +221,7 @@ frontend/
 
 **Проверка:** для В-204 список совпадает с тем, что в операциях и кулачках установа.
 
-**Модули:** только `backend/assembly/service.py` + один блок UI.
+**Модули:** только `sheets-backend/Assembly.gs` + один блок UI.
 
 **Изоляция:** модуль только читает. Выключили — карточка детали и техпроцесс работают.
 
@@ -257,14 +250,14 @@ frontend/
 
 **Делаем:**
 
-- фронт передаёт `initData` от Telegram WebApp;
-- бэкенд проверяет подпись (токен бота знает только сервер);
-- опционально: белый список `telegram_user_id`;
-- middleware в `core/`, роутеры не трогаем.
+- фронт передаёт `initData` от Telegram WebApp (envelope / заголовок в payload);
+- Apps Script проверяет подпись (`BOT_TOKEN` в Script Properties);
+- опционально: белый список `TELEGRAM_ALLOWED_USER_IDS`;
+- флаг `TELEGRAM_AUTH_ENABLED`; роутеры модулей не трогаем.
 
 **Проверка:** запрос без initData → 401; из Telegram → OK.
 
-**Изоляция:** вся Telegram-логика в `core/telegram_auth.py` и `frontend/telegram/`. Отключил — API открыт (только для разработки).
+**Изоляция:** Telegram-логика в `sheets-backend/Core.gs` и `frontend/telegram/`. Отключил — API открыт (только для разработки).
 
 ---
 
@@ -304,18 +297,18 @@ frontend/
 **Делаем:**
 
 - **GitHub Pages** — публикация фронтенда (HTTPS для Telegram уже есть);
-- **GitHub Actions** — workflow `.github/workflows/deploy.yml`: сборка `frontend/`, деплой в Pages при push в `main`;
+- **GitHub Actions** — сборка `frontend/`, деплой в Pages при push в `main`;
 - в `frontend` — `base` в Vite под путь репозитория (`/<repo>/` или кастомный домен);
-- **GitHub Secrets** — `BOT_TOKEN`, `DATABASE_URL` и прочие секреты (не в коде);
-- **GitHub Actions** — отдельный workflow для API: сборка и деплой `backend/` (хостинг API вне Pages, но pipeline живёт в репозитории);
-- в BotFather — URL Mini App: `https://<user>.github.io/<repo>/` (или кастомный домен через GitHub Pages);
-- в `Readme.md` — кратко: как запустить деплой и куда смотреть логи Actions.
+- **GitHub Secrets** — `VITE_API_URL` = URL Apps Script Web App;
+- API: деплой вручную из `sheets-backend/` как Google Apps Script Web App (Script Properties: таблица, Drive, `BOT_TOKEN`);
+- в BotFather — URL Mini App: `https://<user>.github.io/<repo>/`;
+- в `Readme.md` — как задеплоить Sheets backend и Pages.
 
-**Проверка:** push в `main` → Actions зелёный → с телефона бот → Mini App открывается → деталь и техпроцесс на экране.
+**Проверка:** push в `main` → Actions зелёный → Mini App → данные из Google Таблицы.
 
-**Файлы:** `.github/workflows/deploy-frontend.yml`, `.github/workflows/deploy-api.yml` (при необходимости), `frontend/vite.config.ts`.
+**Файлы:** `.github/workflows/deploy-frontend.yml`, `sheets-backend/*`, `frontend/vite.config.ts`.
 
-**Не делаем:** ручной деплой на VPS, отдельный nginx-конфиг вне GitHub.
+**Не делаем:** Render/VPS/Postgres для MVP, параллельный FastAPI «на всякий случай».
 
 ---
 
@@ -380,5 +373,5 @@ frontend/
 1. **Этапы 0–10** — каждый закончен сам по себе, с своей проверкой.
 2. **Модули:** `catalog`, `parts`, `tech_process`, `assembly` (+ опционально `history`) — отдельные папки на бэке и во фронте.
 3. **Изоляция:** связи через id и HTTP-контракты; сводка и история только читают или пишут в свой угол.
-4. **Развёртывание:** GitHub Pages (фронт) + GitHub Actions (сборка и деплой из репозитория).
+4. **Развёртывание:** GitHub Pages (фронт) + Apps Script Web App (API) + Sheets/Drive.
 5. **MVP для цеха:** каркас → справочник → детали с фото → техпроцесс с установами и операциями → главный экран → проверка Telegram → деплой на GitHub.

@@ -8,7 +8,7 @@ Telegram Mini App для учёта техпроцессов на токарно
 
 | Этап | Модуль | Статус |
 |------|--------|--------|
-| 0 | Каркас FastAPI + React/Vite | готов |
+| 0 | Каркас + health | готов |
 | 1 | Справочник `catalog` | готов |
 | 2 | Детали `parts` + фото | готов |
 | 3 | Техпроцесс: установы | готов |
@@ -17,183 +17,163 @@ Telegram Mini App для учёта техпроцессов на токарно
 | 6 | Главный экран и навигация | готов |
 | 7 | Telegram auth | готов |
 | 8–9 | Копирование ТП, история | — |
-| 10 | Деплой GitHub Pages + Actions | готов |
+| 10 | Деплой GitHub Pages | готов |
 
-## Локальный запуск
+**Продакшен-хранилище:** Google Sheets + Apps Script + Drive.  
+FastAPI/`backend/` — [архив](./backend/ARCHIVED.md), для MVP не нужен (Render/VPS/Postgres не требуются).
 
-### 1. PostgreSQL
+## Архитектура
 
-```bash
-docker compose up -d postgres
+```
+Telegram Mini App (GitHub Pages)
+        │
+        ▼  HTTPS POST (JSON envelope)
+Google Apps Script Web App
+        │
+        ├─► Google Sheets (листы = таблицы)
+        └─► Google Drive  (фото деталей)
 ```
 
-### 2. Backend (FastAPI)
+Код API: [`sheets-backend/`](./sheets-backend/)
+
+---
+
+## 1. Google Таблица + Apps Script
+
+### Создать таблицу и скрипт
+
+1. Создайте пустую Google Таблицу **или** в редакторе Apps Script выполните `createBlankSpreadsheetForProject` — создаст таблицу и папку фото, залогирует id.
+2. **Extensions → Apps Script** (или отдельный standalone-проект).
+3. Скопируйте файлы из `sheets-backend/`:
+   - `Code.gs`, `Core.gs`, `SheetsStore.gs`
+   - `Catalog.gs`, `Parts.gs`, `TechProcess.gs`, `Assembly.gs`
+   - `InitSheets.gs`, `appsscript.json`
+4. Выполните функцию `initializeSpreadsheet` — появятся листы из [sheets-template.md](./sheets-backend/sheets-template.md).
+
+### Script Properties
+
+**Project Settings → Script properties:**
+
+| Property | Назначение |
+|----------|------------|
+| `SPREADSHEET_ID` | ID Google Таблицы |
+| `DRIVE_FOLDER_ID` | ID папки Drive для фото |
+| `BOT_TOKEN` | Токен бота (BotFather) |
+| `TELEGRAM_AUTH_ENABLED` | `false` отладка / `true` прод |
+| `TELEGRAM_ALLOWED_USER_IDS` | Опционально, через запятую |
+
+### Деплой Web App
+
+1. **Deploy → New deployment → Web app**
+2. Execute as: **Me**
+3. Who has access: **Anyone**
+4. Deploy → скопировать URL вида  
+   `https://script.google.com/macros/s/.../exec`
+
+После изменений кода: **Manage deployments → Edit → New version**.
+
+### Проверка API
 
 ```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp ../.env.example ../.env
-uvicorn main:app --reload --app-dir .
+# health (GET query)
+curl "https://script.google.com/macros/s/XXXX/exec?path=/health&method=GET"
+
+# или POST envelope
+curl -X POST "https://script.google.com/macros/s/XXXX/exec" \
+  -H "Content-Type: text/plain;charset=utf-8" \
+  -d '{"path":"/health","method":"GET","query":{},"body":null}'
 ```
 
-Проверка: `curl http://localhost:8000/health` → `{"status":"OK"}`
+Ожидается: `{"ok":true,"httpStatus":200,"data":{"status":"OK"}}`
 
-### 3. Frontend (React + Vite)
+---
+
+## 2. Frontend (GitHub Pages)
+
+### Secret и пересборка
+
+**GitHub → Settings → Secrets and variables → Actions:**
+
+| Secret | Значение |
+|--------|----------|
+| `VITE_API_URL` | URL Web App `/exec` **без** слэша в конце |
+
+Затем **Actions → Deploy Frontend → Run workflow**.
+
+Mini App URL: `https://ghostvip1717-glitch.github.io/cnc-tech-process/`
+
+### Локально
 
 ```bash
 cd frontend
+cp ../.env.example ../.env   # или задать VITE_API_URL
+# в .env: VITE_API_URL=https://script.google.com/macros/s/XXXX/exec
 npm install
 npm run dev
 ```
 
-Открыть http://localhost:5173 → навигация «Детали» / «Инструмент».
+Фронт ходит в Apps Script **одним** транспортом (`frontend/shared/api/client.ts`):  
+POST на `VITE_API_URL` с телом `{ path, method, query, body, telegramInitData }`.  
+Заголовок `X-Telegram-Init-Data` передаётся внутри envelope (CORS без preflight).
 
-## Telegram auth (этап 7)
+---
 
-По умолчанию для локальной разработки auth **выключен**:
+## 3. Telegram auth (этап 7)
 
-```env
-TELEGRAM_AUTH_ENABLED=false
-```
-
-Для продакшена:
-
-```env
-BOT_TOKEN=<токен бота из BotFather>
-TELEGRAM_AUTH_ENABLED=true
-# опционально — только эти telegram user id:
-TELEGRAM_ALLOWED_USER_IDS=123456789
-```
-
-- Фронт передаёт `WebApp.initData` в заголовке `X-Telegram-Init-Data` (общий клиент `frontend/shared/api/client.ts`)
-- Бэкенд проверяет подпись через `BOT_TOKEN` (`backend/core/telegram_auth.py`)
-- `GET /health` и статика `/uploads/` — без auth
-- При `TELEGRAM_AUTH_ENABLED=true` запрос к `/api/v1/*` без заголовка → **401**
-
-Проверка:
+- Фронт по-прежнему берёт `WebApp.initData`
+- Apps Script: проверка HMAC в `Core.gs` (`BOT_TOKEN` из Properties)
+- `TELEGRAM_AUTH_ENABLED=false` — API открыт (отладка)
+- `true` + нет initData → **401** (`detail` в envelope)
+- `GET /health` — без auth
 
 ```bash
-# auth выключен — OK
-curl http://localhost:8000/api/v1/parts
-
-# auth включён — 401 без заголовка
-TELEGRAM_AUTH_ENABLED=true BOT_TOKEN=xxx uvicorn main:app --app-dir backend
-curl -i http://localhost:8000/api/v1/parts
+# auth=true → 401 без initData
+curl -X POST "https://script.google.com/macros/s/XXXX/exec" \
+  -H "Content-Type: text/plain;charset=utf-8" \
+  -d '{"path":"/api/v1/parts","method":"GET","query":{},"body":null}'
+# → {"ok":false,"httpStatus":401,"detail":"Missing Telegram init data"}
 ```
 
-## Деплой на GitHub (этап 10)
+---
 
-### Mini App URL
+## 4. Чеклист проверки
 
-После настройки Pages:
+1. `health` → OK  
+2. Создать catalog item (инструмент) + деталь «В-204 Втулка» — строки в таблице  
+3. Загрузить фото — файл в папке Drive, `file_url` в `part_photos`  
+4. Два установа + операции — листы `setups` / `operations`  
+5. «Нужно для изготовления» (`required-items`) совпадает с ТП  
+6. `TELEGRAM_AUTH_ENABLED=true` без initData → 401  
 
-`https://ghostvip1717-glitch.github.io/cnc-tech-process/`
+---
 
-В BotFather укажите этот URL как Mini App.
+## API (контракты модулей)
 
-### Ошибка «Request failed with status 404»
+Пути те же, что у прежнего FastAPI. Транспорт — envelope к Web App.
 
-Фронт на Pages работает, но **API ещё не подключён**. Запросы уходят на `github.io/api/v1/...` — там нет сервера.
+| Модуль | Пути |
+|--------|------|
+| health | `GET /health` |
+| catalog | `GET/POST /api/v1/catalog`, `GET/PATCH/DELETE /api/v1/catalog/{id}` |
+| parts | CRUD `/api/v1/parts`, photos upload/delete/reorder |
+| tech_process | `/api/v1/parts/{id}/tech-process` + setups/operations |
+| assembly | `GET /api/v1/parts/{id}/required-items` |
 
-**Исправление (≈10 мин):**
+Фото: multipart на фронте → base64 в envelope → файл в Drive → `url` = публичная ссылка.
 
-1. **Поднять API на Render** (бесплатно):  
-   [Deploy to Render](https://render.com/deploy?repo=https://github.com/ghostvip1717-glitch/cnc-tech-process)  
-   Дождаться статуса **Live**, скопировать URL вида `https://cnc-tech-process-api.onrender.com`
+---
 
-2. **Проверить API:**  
-   `curl https://ВАШ-URL.onrender.com/health` → `{"status":"OK"}`
+## Устаревшее (не для MVP)
 
-3. **GitHub → Settings → Secrets and variables → Actions** → New secret:  
-   - Name: `VITE_API_URL`  
-   - Value: `https://ВАШ-URL.onrender.com` (без слэша в конце)
+| Путь | Статус |
+|------|--------|
+| `backend/` (FastAPI + PostgreSQL) | архив, см. [ARCHIVED.md](./backend/ARCHIVED.md) |
+| `docker-compose.yml`, `render.yaml` | не нужны для Pages MVP |
+| `.github/workflows/deploy-api.yml` | проверка архивного backend, внешний деплой не требуется |
 
-4. **Actions → Deploy Frontend → Run workflow** → дождаться зелёной галочки
+## Стек (прод)
 
-5. Обновить Mini App в браузере (Ctrl+F5)
-
-### GitHub Pages (фронтенд)
-
-1. **Settings → Pages → Build and deployment → Source: GitHub Actions** (рекомендуется; если стоит *Deploy from branch*, в корне лежит собранный `index.html` + `.nojekyll`)
-2. Добавьте **Secrets** (Settings → Secrets and variables → Actions):
-
-| Secret | Назначение |
-|--------|------------|
-| `VITE_API_URL` | URL API в продакшене (например `https://api.example.com`) |
-| `BOT_TOKEN` | Токен бота (для API-хостинга) |
-| `DATABASE_URL` | PostgreSQL (для API-хостинга) |
-| `API_DEPLOY_WEBHOOK_URL` | Опционально: webhook деплоя API (Render/Fly/Railway) |
-
-3. Push в `main` → workflow **Deploy Frontend** (`.github/workflows/deploy-frontend.yml`)
-4. Логи: **Actions** → Deploy Frontend
-
-Локальная проверка сборки под Pages:
-
-```bash
-cd frontend
-VITE_BASE_PATH=/cnc-tech-process/ VITE_API_URL=https://api.example.com npm run build
-```
-
-### API (вне GitHub Pages)
-
-GitHub Pages отдаёт только статику. API размещается отдельно (Render, Fly.io, Railway, VPS).
-
-- Workflow **Deploy API** (`.github/workflows/deploy-api.yml`): проверка сборки backend при push в `main`
-- Если задан `API_DEPLOY_WEBHOOK_URL` — POST на webhook внешнего хостинга
-- Docker: `backend/Dockerfile`
-
-Переменные API в продакшене:
-
-```env
-DATABASE_URL=postgresql+asyncpg://...
-BOT_TOKEN=...
-TELEGRAM_AUTH_ENABLED=true
-```
-
-### Проверка
-
-1. Actions зелёный после push в `main`
-2. Pages открывается по URL выше
-3. Из Telegram бота → Mini App → деталь и техпроцесс на экране
-
-## API
-
-### Справочник (`/api/v1/catalog`)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET | `/api/v1/catalog` | Список (`?type=tool\|plate\|jaw`, `?q=`) |
-| POST | `/api/v1/catalog` | `{type, name, note?}` |
-| GET/PATCH/DELETE | `/api/v1/catalog/{id}` | CRUD |
-
-### Детали (`/api/v1/parts`)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET/POST | `/api/v1/parts` | Список (`?q=`) / создание |
-| GET/PATCH/DELETE | `/api/v1/parts/{id}` | Карточка |
-| POST | `/api/v1/parts/{id}/photos` | Upload фото (`file`) |
-| DELETE | `/api/v1/parts/{id}/photos/{photo_id}` | Удаление фото |
-| PATCH | `/api/v1/parts/{id}/photos/reorder` | `{photo_ids}` |
-
-Фото: `backend/uploads/parts/{part_id}/`, URL `/uploads/...`
-
-### Техпроцесс (`/api/v1/parts/{id}/tech-process`)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET/PUT | `.../tech-process` | Получить / создать |
-| POST/PATCH/DELETE | `.../setups/{setup_id}` | Установы (`jaw_id`) |
-| POST/PATCH/DELETE | `.../operations/{op_id}` | Операции |
-| PATCH | `.../setups/{setup_id}/operations/reorder` | Порядок операций |
-
-### Сводка (`/api/v1/parts/{id}/required-items`)
-
-Уникальные инструмент, пластины, кулачки для детали.
-
-## Стек
-
-- API: FastAPI + PostgreSQL
-- Frontend: React + Vite + `@twa-dev/sdk`
+- API: Google Apps Script Web App  
+- БД: Google Sheets  
+- Фото: Google Drive  
+- Frontend: React + Vite + `@twa-dev/sdk` на GitHub Pages  

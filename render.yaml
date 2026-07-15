@@ -1,4 +1,5 @@
 # Blueprint: https://render.com/deploy?repo=https://github.com/ghostvip1717-glitch/cnc-tech-process
+# ARCHIVED: Render FastAPI+Postgres. Прод API = Google Apps Script (sheets-backend/).
 services:
   - type: web
     name: cnc-tech-process-api
