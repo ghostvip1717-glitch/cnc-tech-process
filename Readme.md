@@ -4,6 +4,8 @@ Telegram Mini App для учёта техпроцессов на токарно
 
 План реализации: [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)
 
+Google Таблица (хранилище): [toolsAndWork](https://docs.google.com/spreadsheets/d/1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU/edit?usp=sharing) — подготовка листов: [sheets-backend/SETUP.md](./sheets-backend/SETUP.md)
+
 ## Статус этапов
 
 | Этап | Модуль | Статус |
