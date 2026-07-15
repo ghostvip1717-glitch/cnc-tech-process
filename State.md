@@ -7,3 +7,4 @@
 - 2026-07-15: DRIVE_PHOTOS_FOLDER_ID=1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC
 - 2026-07-15: sheets-backend/ONE_FILE.gs — весь API одним файлом для вставки в Apps Script
 - 2026-07-15: merge sheets backend в main; фронт с DEFAULT/VITE_API_URL → Apps Script /exec; sync Pages static
+- 2026-07-15: audit — Pages+API OK; ТП/операции/assembly OK; фото Drive 500 (нет oauthScopes); auth prod+BotFather, этапы 8–9 открыты
