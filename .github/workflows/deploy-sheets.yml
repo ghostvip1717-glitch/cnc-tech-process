@@ -1,0 +1,72 @@
+name: Deploy Sheets Backend (clasp)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sheets-backend/**"
+      - ".github/workflows/deploy-sheets.yml"
+  workflow_dispatch:
+
+jobs:
+  clasp-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sheets-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: sheets-backend/package-lock.json
+
+      - name: Install deps + clasp
+        run: |
+          npm ci
+          npm install -g @google/clasp@2.4.2
+
+      - name: Sync rules + rebuild ONE_FILE fallback
+        run: npm run build:one-file
+
+      - name: Skip if clasp secrets missing
+        id: secrets
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ] || [ -z "$GAS_SCRIPT_ID" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLASP_CREDENTIALS / GAS_SCRIPT_ID not set — clasp push skipped. Add GitHub secrets to enable auto-deploy."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write clasp credentials
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+        run: |
+          mkdir -p ~/.clasprc.d
+          echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+          printf '%s\n' "{\"scriptId\":\"$GAS_SCRIPT_ID\",\"rootDir\":\".\"}" > .clasp.json
+
+      - name: clasp push
+        if: steps.secrets.outputs.configured == 'true'
+        run: clasp push --force
+
+      - name: clasp deploy (new version)
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          GAS_DEPLOYMENT_ID: ${{ secrets.GAS_DEPLOYMENT_ID }}
+        run: |
+          if [ -n "$GAS_DEPLOYMENT_ID" ]; then
+            clasp deploy -i "$GAS_DEPLOYMENT_ID" -d "ci-$(git rev-parse --short HEAD)"
+          else
+            echo "::warning::GAS_DEPLOYMENT_ID not set — code pushed, Web App version not updated. Set secret to clasp deploy."
+          fi

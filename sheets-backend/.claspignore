@@ -1,0 +1,13 @@
+ONE_FILE.gs
+pure/**
+scripts/**
+tests/**
+node_modules/**
+package.json
+package-lock.json
+vitest.config.js
+eslint.config.js
+**/*.md
+CONFIG.env
+.clasp.json
+.clasp.json.example
