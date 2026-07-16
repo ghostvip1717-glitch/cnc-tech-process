@@ -17,3 +17,4 @@
 - 2026-07-15: policy — всегда мержить в main без спроса; Pages из main
 - 2026-07-15: merge speed-up → main (PR#13); Pages deploy; GAS ONE_FILE ещё руками New version
 - 2026-07-15: Pages LIVE `index-D4hph2i7.js` (CI sync); FE cache+keepMounted в проде; GAS sheet-cache не задеплоен пока нет New version
+- 2026-07-16: task1 — удалены backend/, render.yaml, docker-compose.yml, deploy-api.yml; API.md

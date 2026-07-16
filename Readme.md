@@ -14,7 +14,7 @@ Telegram Mini App для учёта техпроцессов на токарно
 | 8–9 | Копирование ТП, история | — |
 
 **Прод-путь:** Pages → Apps Script `/exec` → Sheets (+ Drive фото).  
-FastAPI/`backend/` — [архив](./backend/ARCHIVED.md). Render/Postgres/VPS **не нужны**.
+Единственный backend: `sheets-backend/` (Apps Script + Sheets + Drive). Контракт: [sheets-backend/API.md](./sheets-backend/API.md).
 
 ## Готовые ресурсы
 
