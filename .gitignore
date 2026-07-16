@@ -10,3 +10,10 @@ dist/
 
 postgres_data/
 uploads/
+
+# Legacy Pages static copies (deploy via Actions artifact only)
+/index.html
+/404.html
+/assets/
+/docs/
+/.nojekyll
