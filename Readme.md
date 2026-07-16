@@ -31,7 +31,9 @@ Telegram Mini App для учёта техпроцессов на токарно
 
 Пуш в `main` (`frontend/**`) → workflow **Deploy Frontend**.
 
-Обязательно: **Settings → Pages → Source = GitHub Actions** (не branch `/`).
+**Сейчас:** Pages source = branch `main` `/` (legacy). Пока так — CI коммитит `index.html`/`assets/` в корень. Переключи **Settings → Pages → GitHub Actions**, после этого root-sync можно убрать.
+
+Цель: **Settings → Pages → Source = GitHub Actions**.
 
 ```bash
 cd frontend && npm ci && npm run lint && npm run build
