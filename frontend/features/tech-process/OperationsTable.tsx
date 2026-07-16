@@ -81,7 +81,7 @@ export function OperationsTable({
   const handleFieldUpdate = async (
     operation: Operation,
     field: "tool_id" | "plate_id" | "title" | "op_number" | "comment",
-    value: string | number,
+    value: string | number | null,
   ) => {
     setSubmitting(true);
     setError(null);
@@ -242,7 +242,7 @@ export function OperationsTable({
                   onBlur={(event) => {
                     const value = event.target.value.trim() || null;
                     if (value !== operation.comment) {
-                      void updateOperation(partId, operation.id, { comment: value }).then(onChanged);
+                      void handleFieldUpdate(operation, "comment", value);
                     }
                   }}
                 />

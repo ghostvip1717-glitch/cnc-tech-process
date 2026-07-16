@@ -19,3 +19,4 @@
 - 2026-07-15: Pages LIVE `index-D4hph2i7.js` (CI sync); FE cache+keepMounted в проде; GAS sheet-cache не задеплоен пока нет New version
 - 2026-07-16: task1 — удалены backend/, render.yaml, docker-compose.yml, deploy-api.yml; API.md
 - 2026-07-16: task2 — только actions/deploy-pages; удалены docs/, root index/404/assets
+- 2026-07-16: task3 — OperationsTable comment onBlur → handleFieldUpdate try/catch
