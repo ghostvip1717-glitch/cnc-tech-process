@@ -117,18 +117,25 @@ function sheetSetMeta_(key, value) {
 /**
  * Allocate next integer id from meta (keys like next_catalog_id).
  * Seed from prepareSpreadsheet starts at 1.
+ * Locked to avoid duplicate ids under concurrent Web App requests.
  */
 function sheetNextId_(sheetName) {
-  var key = META_COUNTERS[sheetName];
-  if (!key) {
-    throw new HttpError_(500, 'No meta counter for sheet: ' + sheetName);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var key = META_COUNTERS[sheetName];
+    if (!key) {
+      throw new HttpError_(500, 'No meta counter for sheet: ' + sheetName);
+    }
+    var current = Number(sheetGetMeta_(key));
+    if (isNaN(current) || current < 1) {
+      current = 1;
+    }
+    sheetSetMeta_(key, current + 1);
+    return current;
+  } finally {
+    lock.releaseLock();
   }
-  var current = Number(sheetGetMeta_(key));
-  if (isNaN(current) || current < 1) {
-    current = 1;
-  }
-  sheetSetMeta_(key, current + 1);
-  return current;
 }
 
 function sheetRows_(sheetName) {

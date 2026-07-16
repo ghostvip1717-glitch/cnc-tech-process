@@ -1,16 +1,7 @@
 /**
  * Tech process: one per part, setups, operations, reorder.
+ * Labels / reorder / cascade planning: TechProcessRules.gs (pure).
  */
-
-var ROMAN_ORDERS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-
-function setupOrderLabel_(order) {
-  var n = Number(order);
-  if (n >= 0 && n < ROMAN_ORDERS.length) {
-    return ROMAN_ORDERS[n];
-  }
-  return String(n + 1);
-}
 
 function operationSerialize_(row) {
   return {
@@ -85,13 +76,7 @@ function setupCreate_(partId, body) {
 
   var tp = techProcessGetOrCreate_(partId);
   var setups = setupsRepoListByTp_(tp.id);
-  var nextOrder = 0;
-  for (var i = 0; i < setups.length; i++) {
-    var o = Number(setups[i].order);
-    if (o >= nextOrder) {
-      nextOrder = o + 1;
-    }
-  }
+  var nextOrder = nextSetupOrder_(setups);
 
   var id = sheetNextId_(SHEET_NAMES.SETUPS);
   var row = {
@@ -149,13 +134,7 @@ function operationCreate_(partId, setupId, body) {
   }
 
   var ops = operationsRepoListBySetup_(setupId);
-  var nextOrder = 0;
-  for (var i = 0; i < ops.length; i++) {
-    var o = Number(ops[i].order);
-    if (o >= nextOrder) {
-      nextOrder = o + 1;
-    }
-  }
+  var nextOrder = nextOperationOrder_(ops);
 
   var id = sheetNextId_(SHEET_NAMES.OPERATIONS);
   var row = {
@@ -225,21 +204,18 @@ function operationDelete_(partId, operationId) {
 
 function operationsReorder_(partId, setupId, body) {
   setupRequireForPart_(partId, setupId);
-  if (!body || !body.operation_ids || !(body.operation_ids instanceof Array)) {
-    throw new HttpError_(422, 'operation_ids is required');
-  }
   var ops = operationsRepoListBySetup_(setupId);
-  if (ops.length !== body.operation_ids.length) {
-    throw new HttpError_(422, 'operation_ids must contain all operation ids');
+  var existingIds = ops.map(function (row) {
+    return Number(row.id);
+  });
+  var check = validateReorderIds_(body && body.operation_ids, existingIds);
+  if (!check.ok) {
+    throw new HttpError_(422, check.detail);
   }
+
   var byId = {};
   for (var i = 0; i < ops.length; i++) {
     byId[Number(ops[i].id)] = ops[i];
-  }
-  for (var j = 0; j < body.operation_ids.length; j++) {
-    if (!byId[Number(body.operation_ids[j])]) {
-      throw new HttpError_(422, 'operation_ids must contain all operation ids');
-    }
   }
 
   var result = [];

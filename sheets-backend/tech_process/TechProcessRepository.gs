@@ -78,21 +78,12 @@ function techProcessDeleteCascade_(tp) {
   for (var i = 0; i < setups.length; i++) {
     opRows = opRows.concat(operationsRepoListBySetup_(setups[i].id));
   }
-  opRows.sort(function (a, b) {
-    return b.__row - a.__row;
-  });
-  for (var j = 0; j < opRows.length; j++) {
-    operationsRepoDelete_(opRows[j].__row);
+  var plan = planTechProcessCascadeDelete_(tp, setups, opRows);
+  for (var j = 0; j < plan.operations.length; j++) {
+    operationsRepoDelete_(plan.operations[j].__row);
   }
-
-  setups
-    .slice()
-    .sort(function (a, b) {
-      return b.__row - a.__row;
-    })
-    .forEach(function (setup) {
-      setupsRepoDelete_(setup.__row);
-    });
-
-  techProcessRepoDelete_(tp.__row);
+  for (var s = 0; s < plan.setups.length; s++) {
+    setupsRepoDelete_(plan.setups[s].__row);
+  }
+  techProcessRepoDelete_(plan.techProcess.__row);
 }

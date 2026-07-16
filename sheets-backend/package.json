@@ -1,0 +1,17 @@
+{
+  "name": "cnc-sheets-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync:rules": "node scripts/sync-pure-rules.mjs",
+    "build:one-file": "npm run sync:rules && node scripts/build-one-file.mjs",
+    "test": "npm run sync:rules && vitest run",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "eslint": "^9.22.0",
+    "globals": "^16.0.0",
+    "vitest": "^3.0.8"
+  }
+}

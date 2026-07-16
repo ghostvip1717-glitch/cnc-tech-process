@@ -44,7 +44,7 @@ function catalogCreate_(body) {
     throw new HttpError_(422, 'type and name are required');
   }
   var type = String(body.type);
-  if (['tool', 'plate', 'jaw'].indexOf(type) === -1) {
+  if (!isValidCatalogType_(type)) {
     throw new HttpError_(422, 'Invalid type');
   }
   var name = String(body.name).trim();
