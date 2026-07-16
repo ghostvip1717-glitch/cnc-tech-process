@@ -1,154 +1,117 @@
 # Google Sheets backend — установка и деплой
 
+Единственный прод-backend Mini App. Контракт HTTP: [API.md](./API.md).
+
 ## Готово
 
 | Что | Значение |
 |-----|----------|
 | Таблица | https://docs.google.com/spreadsheets/d/1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU/edit |
-| SPREADSHEET_ID | `1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU` |
-| Web App URL | `https://script.google.com/macros/s/AKfycbxD1AjO9kD26CNbEm_SyJoMjm1UkNYdh3kKleOFbc4WGnkQbLbB8oS_LLQ5AMOg1CzeUA/exec` |
-| Drive photos folder | https://drive.google.com/drive/folders/1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC |
-| `DRIVE_PHOTOS_FOLDER_ID` | `1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC` |
-| Листы | подготовлены (`prepareSpreadsheet`) |
-
-См. также `CONFIG.env`.
+| SPREADSHEET_ID | Script Property (см. `CONFIG.env`) |
+| Web App URL | GitHub Secret `VITE_API_URL` / Script deploy URL |
+| Drive photos | Script Property `DRIVE_PHOTOS_FOLDER_ID` |
 
 ---
 
-## 1. Вставить код API в Apps Script (простой способ)
+## Основной деплой: clasp + GitHub Actions
 
-**Один файл:** [`ONE_FILE.gs`](./ONE_FILE.gs) — весь backend.
+1. Создай Apps Script проект (или возьми существующий), скопируй **Script ID** (Project Settings).
+2. Локально один раз: `npm i -g @google/clasp && clasp login` → файл `~/.clasprc.json`.
+3. GitHub Secrets репозитория:
+   - `CLASP_CREDENTIALS` — содержимое `~/.clasprc.json`
+   - `GAS_SCRIPT_ID` — Script ID
+   - `GAS_DEPLOYMENT_ID` — id Web App deployment (`clasp deployments`)
+   - `VITE_API_URL` — URL `/exec` для фронта
+4. Пуш в `main` по путям `sheets-backend/**` → workflow **Deploy Sheets Backend (clasp)** делает `clasp push` + `clasp deploy`.
+5. Пример локального `.clasp.json`: скопируй [`.clasp.json.example`](./.clasp.json.example).
+
+Модульные `.gs` — источник правды. `ONE_FILE.gs` генерируется (`npm run build:one-file`) только как **ручной fallback**.
+
+### Локально
+
+```bash
+cd sheets-backend
+npm ci
+npm test
+npm run lint
+npm run build:one-file   # обновить ONE_FILE.gs fallback
+clasp push --force
+clasp deploy -i "$GAS_DEPLOYMENT_ID" -d "local"
+```
+
+---
+
+## Fallback: ручная вставка ONE_FILE.gs
+
+Если секреты clasp ещё не настроены:
 
 1. Таблица → **Расширения → Apps Script**.
-2. Удали содержимое всех файлов; оставь один файл (например `Code`).
-3. Открой [`ONE_FILE.gs`](./ONE_FILE.gs) → скопируй всё → вставь → **Сохранить**.
-4. **Манифест с Drive-правами (обязательно для фото):**
-   - слева значок ⚙️ **Project Settings** → включи **Show "appsscript.json" manifest file in editor**;
-   - открой файл `appsscript.json` в редакторе;
-   - замени содержимое на [`appsscript.json`](./appsscript.json) из репо (там `oauthScopes`: `spreadsheets`, `drive`, `script.container.ui`);
-   - **Сохранить**.
-5. При запросе авторизации → **Разрешить** / Review permissions → выбери аккаунт → **Allow** (должен появиться доступ к **Google Drive**). Без этого `DriveApp.getFolderById` даст 500.
-6. Script Properties (см. ниже) → **Новая версия** Web App (доступ: Все).
-
-### Альтернатива: по файлам
-
-Удалить старые/лишние файлы, создать файлы **с теми же именами** (папки репо в GAS не обязательны — важен текст файла):
+2. Вставь сгенерированный [`ONE_FILE.gs`](./ONE_FILE.gs) (или модули по таблице ниже).
+3. Манифест [`appsscript.json`](./appsscript.json) → **Allow** Drive.
+4. Script Properties → **Deploy → New version**.
 
 | Файл в репо | Имя в Apps Script |
 |-------------|-------------------|
 | `Code.gs` | `Code` |
-| `core/Response.gs` | `Response` |
-| `core/Auth.gs` | `Auth` |
-| `core/SheetStore.gs` | `SheetStore` |
-| `catalog/CatalogRepository.gs` | `CatalogRepository` |
-| `catalog/CatalogService.gs` | `CatalogService` |
-| `parts/PartsRepository.gs` | `PartsRepository` |
-| `parts/PartsService.gs` | `PartsService` |
-| `parts/Photos.gs` | `Photos` |
-| `tech_process/TechProcessRepository.gs` | `TechProcessRepository` |
-| `tech_process/TechProcessService.gs` | `TechProcessService` |
+| `core/*.gs` | `Response`, `Auth`, `SheetStore` |
+| `catalog/*` | `CatalogRepository`, `CatalogService` |
+| `parts/*` | `PartsRepository`, `PartsService`, `Photos` |
+| `tech_process/*` | `TechProcessRepository`, `TechProcessRules`, `TechProcessService` |
 | `assembly/AssemblyService.gs` | `AssemblyService` |
-| `setup/PrepareSpreadsheet.gs` | `PrepareSpreadsheet` (уже был) |
-| `appsscript.json` | `appsscript.json` (манифест) |
-
-Сохранить проект (Ctrl+S). При запросе прав — **разрешить Drive**. Затем New version (раздел 3).
+| `setup/PrepareSpreadsheet.gs` | `PrepareSpreadsheet` |
 
 ---
 
-## 2. Script Properties
+## Script Properties
 
-**Проект → Параметры проекта → Свойства скрипта:**
+| Property | Назначение |
+|----------|------------|
+| `SPREADSHEET_ID` | ID таблицы |
+| `DRIVE_PHOTOS_FOLDER_ID` | Папка фото |
+| `BOT_TOKEN` | BotFather |
+| `TELEGRAM_AUTH_ENABLED` | `false` / `true` |
+| `TELEGRAM_ALLOWED_USER_IDS` | опционально |
 
-| Property | Значение |
-|----------|----------|
-| `SPREADSHEET_ID` | `1kn8B0t_WTImI5At6YKlJqsr_KHS6m2IlRFT0CDnDuUU` |
-| `DRIVE_PHOTOS_FOLDER_ID` | `1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC` |
-| `BOT_TOKEN` | токен BotFather |
-| `TELEGRAM_AUTH_ENABLED` | `false` (отладка) / `true` (прод) |
-| `TELEGRAM_ALLOWED_USER_IDS` | опционально, через запятую |
+### oauthScopes
 
-### Папка Drive для фото
-
-Готовая папка: https://drive.google.com/drive/folders/1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC
-
-ID: `1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC` → свойство `DRIVE_PHOTOS_FOLDER_ID`.
-
-Apps Script должен выполняться **от твоего имени** (Execute as: Me), чтобы писать файлы в эту папку.
-
-### oauthScopes (манифест)
-
-В `appsscript.json` один набор:
-
-```json
-"oauthScopes": [
-  "https://www.googleapis.com/auth/spreadsheets",
-  "https://www.googleapis.com/auth/drive",
-  "https://www.googleapis.com/auth/script.container.ui",
-  "https://www.googleapis.com/auth/script.external_request"
-]
-```
-
-`drive` + `script.external_request` нужны для загрузки фото через **Drive API** (UrlFetch), не через `DriveApp` (у Web App часто Access denied). После смены scopes **обязательно** заново подтвердить права и сделать **New version**.
+См. `appsscript.json` (`spreadsheets`, `drive`, `script.container.ui`, `script.external_request`).
 
 ---
 
-## 3. Новая версия Web App (обязательно после правок!)
+## Frontend (GitHub Pages)
 
-URL `/exec` **не меняется**, но код и scopes не подхватятся без новой версии:
+Деплой только через **Actions → Deploy Frontend** (`actions/deploy-pages`), без коммита `dist` в репо.
 
-1. **Deploy → Manage deployments**
-2. Карандаш (Edit) у существующего Web App
-3. Version: **New version**
-4. Execute as: **Me**
-5. Who has access: **Anyone**
-6. **Deploy**
+В настройках репозитория: **Settings → Pages → Source = GitHub Actions**.
 
-Проверка:
-
-```bash
-curl -sL "https://script.google.com/macros/s/AKfycbxD1AjO9kD26CNbEm_SyJoMjm1UkNYdh3kKleOFbc4WGnkQbLbB8oS_LLQ5AMOg1CzeUA/exec?path=/health"
-# → {"ok":true,"httpStatus":200,"data":{"status":"OK"}}
-```
-
-### Проверка загрузки фото (после New version + Allow Drive)
-
-```text
-POST /api/v1/parts/{id}/photos
-body: { "fileName", "mimeType", "contentBase64" }
-→ 201, url (file_url), файл в папке Drive 1fgbnnDIjqVMECUKleD-NPGbwZAUyhuNC, строка в листе part_photos
-```
-
-До фикса ожидался 500: `You do not have permission to call DriveApp.getFolderById` — после манифеста + переавторизации не должно быть.
+Secret: `VITE_API_URL` = URL `/exec`.
 
 ---
 
-## 4. Frontend (GitHub Pages)
-
-Secret Actions:
-
-- Name: `VITE_API_URL`
-- Value: `https://script.google.com/macros/s/AKfycbxD1AjO9kD26CNbEm_SyJoMjm1UkNYdh3kKleOFbc4WGnkQbLbB8oS_LLQ5AMOg1CzeUA/exec`
-
-Затем **Actions → Deploy Frontend → Run workflow**.
-
----
-
-## 5. HTTP-контракт
-
-Единый формат:
+## HTTP-контракт
 
 - GET: `.../exec?path=/health`
-- POST: body JSON `{"path","method","query","body","initData"}`, `Content-Type: text/plain` (без CORS preflight)
+- POST: JSON envelope `{path,method,query,body,initData}`, `Content-Type: text/plain`
+- Ответ: `{ ok, httpStatus, data|detail }`
 
-Ответ всегда envelope: `{ ok, httpStatus, data|detail }`.
+Полный список маршрутов: [API.md](./API.md).
+
+---
+
+## Тесты / lint
+
+```bash
+cd sheets-backend && npm test && npm run lint
+```
+
+CI: `.github/workflows/ci.yml`.
 
 ---
 
 ## Чеклист
 
 1. health → OK  
-2. catalog: «CNMG 120408», «Кулачки высота 15»  
-3. part «В-204 Втулка» + 2 фото в Drive  
-4. 2 установа + операции  
-5. required-items совпадает  
-6. `TELEGRAM_AUTH_ENABLED=true` без initData → 401  
+2. catalog + parts + photos  
+3. установы I–X + операции + reorder  
+4. required-items  
+5. без валидного initData при `TELEGRAM_AUTH_ENABLED=true` → 401  

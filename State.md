@@ -20,3 +20,9 @@
 - 2026-07-16: task1 — удалены backend/, render.yaml, docker-compose.yml, deploy-api.yml; API.md
 - 2026-07-16: task2 — только actions/deploy-pages; удалены docs/, root index/404/assets
 - 2026-07-16: task3 — OperationsTable comment onBlur → handleFieldUpdate try/catch
+- 2026-07-16: task4 — clasp workflow + .claspignore; ONE_FILE генерируется build:one-file; secrets CLASP_*
+- 2026-07-16: task5 — pure/techProcessRules + vitest; cascade/reorder/roman/types
+- 2026-07-16: task6 — eslint FE+sheets; prettier FE; ci.yml
+- 2026-07-16: task7 — LockService в sheetNextId_
+- 2026-07-16: task8 — Readme/SETUP/API/IMPLEMENTATION_PLAN; security отложена
+- 2026-07-16: Pages Source must be GitHub Actions (legacy branch / сломается после удаления root assets)

@@ -17,3 +17,6 @@ uploads/
 /assets/
 /docs/
 /.nojekyll
+sheets-backend/node_modules/
+sheets-backend/.clasp.json
+**/.clasprc.json
