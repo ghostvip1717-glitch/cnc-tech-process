@@ -31,3 +31,4 @@
 - 2026-07-24: merged PR#14 UX redesign → main
 - 2026-07-24: deploy-frontend push race fix — pull --rebase retry x3; re-deploy UX static to root/Pages
 - 2026-07-24: fix dark-theme text on light cards — #16181c for hub/parts/catalog/TP/assembly titles
+- 2026-07-24: Drive photos — thumbnail URL + blocking share + backfillDrivePhotoPermissions one-off
