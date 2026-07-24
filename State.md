@@ -30,5 +30,4 @@
 - 2026-07-24: UX redesign FE — hub (без tab-bar), stack-nav, BottomSheet/Confirm/Toast/Skeleton/Fab/DragList; part compact+edit+gallery; TP setups→setup; catalog sheets; assembly icons
 - 2026-07-24: merged PR#14 UX redesign → main
 - 2026-07-24: deploy-frontend push race fix — pull --rebase retry x3; re-deploy UX static to root/Pages
-
-- 2026-07-24: merged PR#14 UX redesign → main
+- 2026-07-24: fix dark-theme text on light cards — #16181c for hub/parts/catalog/TP/assembly titles
