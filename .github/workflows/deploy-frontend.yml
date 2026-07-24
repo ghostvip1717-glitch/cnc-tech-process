@@ -61,7 +61,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html 404.html .nojekyll assets/
           git diff --staged --quiet || git commit -m "chore: sync Pages static from CI [skip ci]"
-          git push
+
+          # Legacy Pages sync pushes back to main; parallel commits (e.g. State.md)
+          # can race the push. Rebase and retry instead of failing the whole deploy.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}/3), rebasing onto origin/main..."
+            git fetch origin main
+            git pull --rebase origin main
+          done
+          echo "Failed to push synced static files after 3 attempts"
+          exit 1
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
