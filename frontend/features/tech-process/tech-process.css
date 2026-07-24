@@ -23,7 +23,7 @@
   align-items: center;
   gap: 0.75rem;
   font: inherit;
-  color: inherit;
+  color: #16181c;
   cursor: pointer;
   text-align: left;
 }
@@ -49,6 +49,7 @@
 
 .tech-process-setup-card-body strong {
   font-size: 1rem;
+  color: #16181c;
 }
 
 .tech-process-setup-card-body span {
@@ -95,6 +96,7 @@
   border: 1px solid #e5e5e5;
   border-radius: 0.5rem;
   background: #fff;
+  color: #16181c;
 }
 
 .tech-process-operation-header {

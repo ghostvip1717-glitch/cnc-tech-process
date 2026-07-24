@@ -71,7 +71,7 @@
   display: grid;
   gap: 0.35rem;
   font: inherit;
-  color: inherit;
+  color: #16181c;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -94,6 +94,7 @@
 .app-hub-tile-title {
   font-size: 1.2rem;
   font-weight: 650;
+  color: #16181c;
 }
 
 .app-hub-tile-text {
