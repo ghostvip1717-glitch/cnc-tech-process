@@ -1,18 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPart, listParts, type Part } from "../../shared/api/parts";
+import { resolveApiUrl } from "../../shared/api/config";
+import {
+  BottomSheet,
+  Fab,
+  SkeletonStack,
+  useToast,
+} from "../../shared/ui";
 import "./parts.css";
 
 interface PartsListPageProps {
   onOpenPart: (partId: number) => void;
-  showHeading?: boolean;
 }
 
-export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageProps) {
+export function PartsListPage({ onOpenPart }: PartsListPageProps) {
+  const { showError } = useToast();
   const [parts, setParts] = useState<Part[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [number, setNumber] = useState("");
   const [title, setTitle] = useState("");
@@ -25,16 +31,15 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
 
   const loadParts = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await listParts(debouncedSearch || undefined);
       setParts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось загрузить детали");
+      showError(err instanceof Error ? err.message : "Не удалось загрузить детали");
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, showError]);
 
   useEffect(() => {
     void loadParts();
@@ -47,7 +52,6 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
     }
 
     setSubmitting(true);
-    setError(null);
     try {
       const part = await createPart({
         number: number.trim(),
@@ -59,7 +63,7 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
       await loadParts();
       onOpenPart(part.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось создать деталь");
+      showError(err instanceof Error ? err.message : "Не удалось создать деталь");
     } finally {
       setSubmitting(false);
     }
@@ -67,8 +71,6 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
 
   return (
     <section className="parts-page">
-      {showHeading && <h1>Детали</h1>}
-
       <div className="parts-toolbar">
         <input
           className="parts-search"
@@ -77,17 +79,55 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <button
-          className="parts-button"
-          type="button"
-          onClick={() => setShowForm((value) => !value)}
-        >
-          + Новая деталь
-        </button>
       </div>
 
-      {showForm && (
-        <form className="parts-form" onSubmit={handleCreate}>
+      {loading ? (
+        <SkeletonStack rows={4} rowHeight="4.25rem" />
+      ) : parts.length === 0 ? (
+        <p className="parts-empty">Детали не найдены</p>
+      ) : (
+        <ul className="parts-list">
+          {parts.map((part) => {
+            const cover = part.photos[0];
+            return (
+              <li
+                key={part.id}
+                className="parts-list-item"
+                onClick={() => onOpenPart(part.id)}
+              >
+                <div className="parts-list-item-main">
+                  <h2>
+                    {part.number} — {part.title}
+                  </h2>
+                  <p>Фото: {part.photos.length}</p>
+                </div>
+                {cover ? (
+                  <img
+                    className="parts-list-thumb"
+                    src={resolveApiUrl(cover.url)}
+                    alt=""
+                  />
+                ) : (
+                  <div className="parts-list-thumb placeholder" aria-hidden />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <Fab label="Новая деталь" onClick={() => setShowForm(true)} />
+
+      <BottomSheet
+        open={showForm}
+        title="Новая деталь"
+        onClose={() => {
+          if (!submitting) {
+            setShowForm(false);
+          }
+        }}
+      >
+        <form className="ui-form" onSubmit={handleCreate}>
           <label>
             Номер
             <input
@@ -106,43 +146,11 @@ export function PartsListPage({ onOpenPart, showHeading = true }: PartsListPageP
               required
             />
           </label>
-          <div className="parts-form-actions">
-            <button className="parts-button" type="submit" disabled={submitting}>
-              Создать
-            </button>
-            <button
-              className="parts-button secondary"
-              type="button"
-              onClick={() => setShowForm(false)}
-              disabled={submitting}
-            >
-              Отмена
-            </button>
-          </div>
+          <button className="ui-btn block" type="submit" disabled={submitting}>
+            Создать
+          </button>
         </form>
-      )}
-
-      {error && <p className="parts-error">{error}</p>}
-      {loading ? (
-        <p className="parts-loading">Загрузка...</p>
-      ) : parts.length === 0 ? (
-        <p className="parts-empty">Детали не найдены</p>
-      ) : (
-        <ul className="parts-list">
-          {parts.map((part) => (
-            <li
-              key={part.id}
-              className="parts-list-item"
-              onClick={() => onOpenPart(part.id)}
-            >
-              <h2>
-                {part.number} — {part.title}
-              </h2>
-              <p>Фото: {part.photos.length}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+      </BottomSheet>
     </section>
   );
 }

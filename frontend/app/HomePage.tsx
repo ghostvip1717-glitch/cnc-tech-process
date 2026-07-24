@@ -1,20 +1,31 @@
-import { PartsListPage } from "../features/parts/PartsListPage";
+import { IconParts, IconTool } from "../shared/ui";
 import "./app.css";
 
 interface HomePageProps {
-  onOpenPart: (partId: number) => void;
+  onOpenParts: () => void;
   onOpenCatalog: () => void;
 }
 
-export function HomePage({ onOpenPart, onOpenCatalog }: HomePageProps) {
+export function HomePage({ onOpenParts, onOpenCatalog }: HomePageProps) {
   return (
-    <div>
-      <div className="app-home-toolbar">
-        <button className="app-catalog-button" type="button" onClick={onOpenCatalog}>
-          Инструмент
+    <section className="app-hub">
+      <p className="app-hub-lead">Выберите раздел</p>
+      <div className="app-hub-grid">
+        <button className="app-hub-tile" type="button" onClick={onOpenParts}>
+          <span className="app-hub-tile-icon" aria-hidden>
+            <IconParts />
+          </span>
+          <span className="app-hub-tile-title">Детали</span>
+          <span className="app-hub-tile-text">Карточки, техпроцесс, сборка</span>
+        </button>
+        <button className="app-hub-tile" type="button" onClick={onOpenCatalog}>
+          <span className="app-hub-tile-icon" aria-hidden>
+            <IconTool />
+          </span>
+          <span className="app-hub-tile-title">Инструмент</span>
+          <span className="app-hub-tile-text">Справочник, пластины, кулачки</span>
         </button>
       </div>
-      <PartsListPage onOpenPart={onOpenPart} showHeading={false} />
-    </div>
+    </section>
   );
 }
