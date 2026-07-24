@@ -8,11 +8,15 @@
 }
 
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #e5e5e5;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  background: var(--tg-theme-bg-color, #ffffff);
 }
 
 .app-header h1 {
@@ -27,55 +31,78 @@
   color: var(--tg-theme-link-color, #2481cc);
   font: inherit;
   cursor: pointer;
-  padding: 0;
+  padding: 0.15rem 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 
 .app-content {
   flex: 1;
-  padding-bottom: 4.5rem;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
 }
 
-.app-bottom-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
-  border-top: 1px solid #e5e5e5;
-  background: var(--tg-theme-bg-color, #ffffff);
+.app-hub {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2rem;
 }
 
-.app-nav-button {
-  flex: 1;
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  font: inherit;
+.app-hub-lead {
+  margin: 0 0 1rem;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.app-hub-grid {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.app-hub-tile {
+  border: 1px solid #e5e5e5;
+  border-radius: 1rem;
+  padding: 1.25rem 1.1rem;
+  background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 100%);
+  text-align: left;
   cursor: pointer;
-  background: #e8e8e8;
-  color: #222;
-}
-
-.app-nav-button.active {
-  background: var(--tg-theme-button-color, #2481cc);
-  color: var(--tg-theme-button-text-color, #fff);
-}
-
-.app-home-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 1rem 0.5rem;
-}
-
-.app-catalog-button {
-  border: none;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.875rem;
+  display: grid;
+  gap: 0.35rem;
   font: inherit;
-  cursor: pointer;
-  background: #e8e8e8;
-  color: #222;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-hub-tile:active {
+  transform: scale(0.985);
+}
+
+.app-hub-tile-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--tg-theme-button-color, #2481cc) 14%, #fff);
+  color: var(--tg-theme-button-color, #2481cc);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.35rem;
+}
+
+.app-hub-tile-title {
+  font-size: 1.2rem;
+  font-weight: 650;
+}
+
+.app-hub-tile-text {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+@media (min-width: 560px) {
+  .app-hub-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }

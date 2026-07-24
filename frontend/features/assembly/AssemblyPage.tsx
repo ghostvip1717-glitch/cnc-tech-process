@@ -1,58 +1,66 @@
 import { useCallback, useEffect, useState } from "react";
 import { getRequiredItems, type RequiredItems } from "../../shared/api/assembly";
+import { IconJaw, IconPlate, IconTool, SkeletonStack, useToast } from "../../shared/ui";
 import "./assembly.css";
 
-interface AssemblyBlockProps {
+interface AssemblyPageProps {
   partId: number;
 }
 
-export function AssemblyBlock({ partId }: AssemblyBlockProps) {
+export function AssemblyPage({ partId }: AssemblyPageProps) {
+  const { showError } = useToast();
   const [items, setItems] = useState<RequiredItems | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const loadItems = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await getRequiredItems(partId);
       setItems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось загрузить сводку");
+      showError(err instanceof Error ? err.message : "Не удалось загрузить сводку");
+      setItems(null);
     } finally {
       setLoading(false);
     }
-  }, [partId]);
+  }, [partId, showError]);
 
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
 
   if (loading) {
-    return <p className="assembly-empty">Загрузка сводки...</p>;
-  }
-
-  if (error) {
-    return <p className="assembly-error">{error}</p>;
+    return (
+      <section className="assembly-page">
+        <SkeletonStack rows={3} rowHeight="5rem" />
+      </section>
+    );
   }
 
   if (!items) {
-    return null;
+    return (
+      <section className="assembly-page">
+        <p className="assembly-empty">Нет данных</p>
+      </section>
+    );
   }
 
   const isEmpty =
     items.tools.length === 0 && items.plates.length === 0 && items.jaws.length === 0;
 
   return (
-    <section className="assembly-block">
-      <h2>Нужно для изготовления</h2>
+    <section className="assembly-page">
+      <p className="assembly-lead">Нужно для изготовления</p>
       {isEmpty ? (
         <p className="assembly-empty">Нет данных — добавьте установы и операции</p>
       ) : (
         <>
           {items.tools.length > 0 && (
             <div className="assembly-group">
-              <h3>Инструмент</h3>
+              <h3>
+                <IconTool size={18} />
+                Инструмент
+              </h3>
               <ul>
                 {items.tools.map((item) => (
                   <li key={`tool-${item.id}`}>{item.name}</li>
@@ -62,7 +70,10 @@ export function AssemblyBlock({ partId }: AssemblyBlockProps) {
           )}
           {items.plates.length > 0 && (
             <div className="assembly-group">
-              <h3>Пластины</h3>
+              <h3>
+                <IconPlate size={18} />
+                Пластины
+              </h3>
               <ul>
                 {items.plates.map((item) => (
                   <li key={`plate-${item.id}`}>{item.name}</li>
@@ -72,7 +83,10 @@ export function AssemblyBlock({ partId }: AssemblyBlockProps) {
           )}
           {items.jaws.length > 0 && (
             <div className="assembly-group">
-              <h3>Кулачки</h3>
+              <h3>
+                <IconJaw size={18} />
+                Кулачки
+              </h3>
               <ul>
                 {items.jaws.map((item) => (
                   <li key={`jaw-${item.id}`}>{item.name}</li>
