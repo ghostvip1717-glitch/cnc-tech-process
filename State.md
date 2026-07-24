@@ -28,3 +28,5 @@
 - 2026-07-16: Pages Source must be GitHub Actions (legacy branch / сломается после удаления root assets)
 - 2026-07-16: FIX Pages — legacy source main/; restore root static+CI sync until Settings→Pages→GitHub Actions
 - 2026-07-24: UX redesign FE — hub (без tab-bar), stack-nav, BottomSheet/Confirm/Toast/Skeleton/Fab/DragList; part compact+edit+gallery; TP setups→setup; catalog sheets; assembly icons
+
+- 2026-07-24: merged PR#14 UX redesign → main
