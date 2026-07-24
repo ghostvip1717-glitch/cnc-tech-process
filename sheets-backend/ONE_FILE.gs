@@ -911,9 +911,13 @@ function photosSerialize_(row) {
     id: toInt_(row.id),
     part_id: toInt_(row.part_id),
     file_path: driveId ? 'drive/' + driveId : fileUrl,
-    url: fileUrl,
+    url: driveId ? driveThumbnailUrl_(driveId) : fileUrl,
     sort_order: toInt_(row.sort_order),
   };
+}
+
+function driveThumbnailUrl_(fileId) {
+  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
 }
 
 function extractDriveFileId_(fileUrl) {
@@ -975,28 +979,40 @@ function driveApiCreateFile_(folderId, fileName, mimeType, bytes) {
 }
 
 function driveApiAnyoneWithLink_(fileId) {
-  var response = UrlFetchApp.fetch(
-    'https://www.googleapis.com/drive/v3/files/' +
-      encodeURIComponent(fileId) +
-      '/permissions',
-    {
-      method: 'post',
-      contentType: 'application/json',
-      headers: {
-        Authorization: 'Bearer ' + getDriveOAuthToken_(),
+  var lastText = '';
+  var maxAttempts = 3;
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    var response = UrlFetchApp.fetch(
+      'https://www.googleapis.com/drive/v3/files/' +
+        encodeURIComponent(fileId) +
+        '/permissions',
+      {
+        method: 'post',
+        contentType: 'application/json',
+        headers: {
+          Authorization: 'Bearer ' + getDriveOAuthToken_(),
+        },
+        payload: JSON.stringify({
+          role: 'reader',
+          type: 'anyone',
+        }),
+        muteHttpExceptions: true,
       },
-      payload: JSON.stringify({
-        role: 'reader',
-        type: 'anyone',
-      }),
-      muteHttpExceptions: true,
-    },
-  );
-  var code = response.getResponseCode();
-  if (code < 200 || code >= 300) {
-    // не блокируем upload, если шаринг не прошёл
-    Logger.log('Drive permission warn: ' + response.getContentText());
+    );
+    var code = response.getResponseCode();
+    lastText = response.getContentText();
+    if (code >= 200 && code < 300) {
+      return;
+    }
+    // Desired state already present — treat as success (idempotent backfill/retry).
+    if (code === 400 && lastText.indexOf('alreadyExists') !== -1) {
+      return;
+    }
+    if (attempt < maxAttempts) {
+      Utilities.sleep(400 * attempt);
+    }
   }
+  throw new HttpError_(500, 'Drive sharing failed: ' + lastText);
 }
 
 function driveApiTrashFile_(fileId) {
@@ -1073,7 +1089,7 @@ function photosUpload_(partId, body) {
     : 'part-' + partId + '-' + Date.now() + ext;
   var created = driveApiCreateFile_(folderId, fileName, mimeType, bytes);
   driveApiAnyoneWithLink_(created.id);
-  var fileUrl = 'https://drive.google.com/uc?export=view&id=' + created.id;
+  var fileUrl = driveThumbnailUrl_(created.id);
 
   var photos = photosRepoListByPart_(partId);
   var sortOrder = 0;
@@ -1180,6 +1196,50 @@ function authorizeDrive() {
     Utilities.newBlob('ok', 'text/plain').getBytes(),
   );
   driveApiTrashFile_(created.id);
+}
+
+/**
+ * One-off: выставить anyone-with-link на уже загруженные фото в PART_PHOTOS.
+ * Старые upload'ы могли остаться без прав из-за silent-fail в driveApiAnyoneWithLink_.
+ * Запустить один раз из редактора: backfillDrivePhotoPermissions → Выполнить → Allow.
+ * Автоматически не вызывается.
+ */
+function backfillDrivePhotoPermissions() {
+  var rows = sheetRows_(SHEET_NAMES.PART_PHOTOS);
+  var ok = 0;
+  var failed = 0;
+  var skipped = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var driveId = extractDriveFileId_(rows[i].file_url);
+    if (!driveId) {
+      skipped++;
+      continue;
+    }
+    try {
+      driveApiAnyoneWithLink_(driveId);
+      ok++;
+    } catch (e) {
+      failed++;
+      Logger.log(
+        'backfillDrivePhotoPermissions fail id=' +
+          rows[i].id +
+          ' driveId=' +
+          driveId +
+          ': ' +
+          (e && e.detail ? e.detail : e && e.message ? e.message : e),
+      );
+    }
+  }
+  Logger.log(
+    'backfillDrivePhotoPermissions done: ok=' +
+      ok +
+      ' failed=' +
+      failed +
+      ' skipped=' +
+      skipped +
+      ' total=' +
+      rows.length,
+  );
 }
 
 // ===== tech_process/TechProcessRepository.gs =====
