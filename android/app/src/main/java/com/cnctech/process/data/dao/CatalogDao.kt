@@ -2,8 +2,10 @@ package com.cnctech.process.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.cnctech.process.data.entity.CatalogCompatibilityEntity
 import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogItemPhotoEntity
 import com.cnctech.process.data.entity.CatalogType
@@ -101,4 +103,31 @@ interface CatalogDao {
 
     @Query("DELETE FROM catalog_items")
     suspend fun clearAll()
+
+    @Query(
+        """
+        SELECT * FROM catalog_items WHERE id IN
+        (SELECT toolId FROM catalog_compatibility WHERE plateId = :plateId)
+        ORDER BY name COLLATE NOCASE ASC
+        """,
+    )
+    fun observeCompatibleTools(plateId: Long): Flow<List<CatalogItemEntity>>
+
+    @Query(
+        """
+        SELECT * FROM catalog_items WHERE id IN
+        (SELECT plateId FROM catalog_compatibility WHERE toolId = :toolId)
+        ORDER BY name COLLATE NOCASE ASC
+        """,
+    )
+    fun observeCompatiblePlates(toolId: Long): Flow<List<CatalogItemEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCompatibility(link: CatalogCompatibilityEntity)
+
+    @Query("DELETE FROM catalog_compatibility WHERE toolId = :toolId AND plateId = :plateId")
+    suspend fun deleteCompatibility(toolId: Long, plateId: Long)
+
+    @Query("DELETE FROM catalog_compatibility")
+    suspend fun clearAllCompatibility()
 }

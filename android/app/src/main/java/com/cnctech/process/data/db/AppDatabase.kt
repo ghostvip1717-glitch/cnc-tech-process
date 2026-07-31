@@ -9,6 +9,7 @@ import androidx.room.TypeConverters
 import com.cnctech.process.data.dao.CatalogDao
 import com.cnctech.process.data.dao.PartDao
 import com.cnctech.process.data.dao.TechProcessDao
+import com.cnctech.process.data.entity.CatalogCompatibilityEntity
 import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogItemPhotoEntity
 import com.cnctech.process.data.entity.CatalogType
@@ -32,11 +33,12 @@ class Converters {
         PartPhotoEntity::class,
         CatalogItemEntity::class,
         CatalogItemPhotoEntity::class,
+        CatalogCompatibilityEntity::class,
         TechProcessEntity::class,
         SetupEntity::class,
         OperationEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

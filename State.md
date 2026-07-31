@@ -39,3 +39,4 @@
 
 - 2026-07-31: Android 8 тем (LocalCncColors/ThemePrefs) + SettingsScreen; MigrationImporter + tools/export_from_sheets.py; dist/migration.zip (3 parts/17 catalog/1 TP)
 - 2026-07-31: FullscreenPhotoViewer — pinch-zoom+pager; Screen.Part/CatalogPhotoViewer; tap preview in galleries; edge-to-edge без AppHeader
+- 2026-07-31: Catalog stockQty/minStock + catalog_compatibility (plate↔tool); DB v3; badges in CatalogScreen

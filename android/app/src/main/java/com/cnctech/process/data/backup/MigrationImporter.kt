@@ -73,6 +73,8 @@ class MigrationImporter(
                             type = type,
                             name = item.getString("name"),
                             note = note,
+                            stockQty = null,
+                            minStockThreshold = 3,
                         ),
                     )
                     photoCount += importPhotos(
@@ -177,6 +179,7 @@ class MigrationImporter(
         db.partDao().clearAllPhotos()
         db.partDao().clearAll()
         db.catalogDao().clearAllPhotos()
+        db.catalogDao().clearAllCompatibility()
         db.catalogDao().clearAll()
     }
 

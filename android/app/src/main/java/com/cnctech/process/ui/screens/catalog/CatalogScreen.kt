@@ -16,13 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Hardware
 import androidx.compose.material.icons.filled.Square
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -53,7 +58,6 @@ import com.cnctech.process.ui.components.CncFab
 import com.cnctech.process.ui.components.CncTextField
 import com.cnctech.process.ui.components.EmptyText
 import com.cnctech.process.ui.components.PrimaryButton
-import com.cnctech.process.ui.components.SkeletonStack
 import com.cnctech.process.ui.components.fieldColors
 import com.cnctech.process.ui.theme.CncBorder
 import com.cnctech.process.ui.theme.CncDanger
@@ -106,8 +110,33 @@ fun CatalogScreen(
     var editing by remember { mutableStateOf<CatalogItemEntity?>(null) }
     var name by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
+    var stockQtyText by remember { mutableStateOf("") }
+    var minStockText by remember { mutableStateOf("3") }
     var busy by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<CatalogItemEntity?>(null) }
+
+    val formType = editing?.type ?: activeType
+
+    var allTools by remember { mutableStateOf<List<CatalogItemEntity>>(emptyList()) }
+    var allPlates by remember { mutableStateOf<List<CatalogItemEntity>>(emptyList()) }
+    LaunchedEffect(sheetMode, editing?.id, formType) {
+        if (sheetMode == "edit" && editing != null) {
+            when (formType) {
+                CatalogType.plate -> allTools = repo.listByType(CatalogType.tool)
+                CatalogType.tool -> allPlates = repo.listByType(CatalogType.plate)
+                CatalogType.jaw -> Unit
+            }
+        }
+    }
+
+    val compatPlateId =
+        if (sheetMode == "edit" && editing != null && formType == CatalogType.plate) editing!!.id else -1L
+    val compatToolId =
+        if (sheetMode == "edit" && editing != null && formType == CatalogType.tool) editing!!.id else -1L
+    val linkedTools by repo.observeCompatibleTools(compatPlateId).collectAsState(initial = emptyList())
+    val linkedPlates by repo.observeCompatiblePlates(compatToolId).collectAsState(initial = emptyList())
+    val linkedToolIds = remember(linkedTools) { linkedTools.map { it.id }.toSet() }
+    val linkedPlateIds = remember(linkedPlates) { linkedPlates.map { it.id }.toSet() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -194,7 +223,23 @@ fun CatalogScreen(
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(row.item.name, color = CncOnSurface, fontWeight = FontWeight.SemiBold)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        row.item.name,
+                                        color = CncOnSurface,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                    if (row.item.type == CatalogType.plate) {
+                                        PlateStockBadge(
+                                            stockQty = row.item.stockQty,
+                                            minStockThreshold = row.item.minStockThreshold,
+                                        )
+                                    }
+                                }
                                 row.item.note?.let {
                                     Text(it, color = CncOnSurfaceSecondary, fontSize = 13.sp)
                                 }
@@ -203,6 +248,8 @@ fun CatalogScreen(
                                 editing = row.item
                                 name = row.item.name
                                 note = row.item.note.orEmpty()
+                                stockQtyText = row.item.stockQty?.toString().orEmpty()
+                                minStockText = row.item.minStockThreshold.toString()
                                 sheetMode = "edit"
                             }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Изменить", tint = CncPrimary)
@@ -221,6 +268,8 @@ fun CatalogScreen(
                 editing = null
                 name = ""
                 note = ""
+                stockQtyText = ""
+                minStockText = "3"
                 sheetMode = "create"
             })
         }
@@ -231,35 +280,155 @@ fun CatalogScreen(
         title = if (sheetMode == "edit") "Изменить позицию" else "Новая позиция",
         onDismiss = { if (!busy) sheetMode = null },
     ) {
-        CncTextField(value = name, onValueChange = { name = it }, label = "Название")
-        Spacer(modifier = Modifier.height(12.dp))
-        CncTextField(
-            value = note,
-            onValueChange = { note = it },
-            label = "Примечание",
-            singleLine = false,
-            minLines = 2,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        PrimaryButton(
-            text = if (sheetMode == "edit") "Сохранить" else "Создать",
-            busy = busy,
-            onClick = {
-                scope.launch {
-                    busy = true
-                    val result = if (sheetMode == "edit" && editing != null) {
-                        repo.update(editing!!.id, name, note)
-                    } else {
-                        repo.create(activeType, name, note)
+        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+            CncTextField(value = name, onValueChange = { name = it }, label = "Название")
+            Spacer(modifier = Modifier.height(12.dp))
+            CncTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = "Примечание",
+                singleLine = false,
+                minLines = 2,
+            )
+
+            if (formType == CatalogType.plate) {
+                Spacer(modifier = Modifier.height(12.dp))
+                CncTextField(
+                    value = stockQtyText,
+                    onValueChange = { stockQtyText = it.filter { ch -> ch.isDigit() } },
+                    label = "Количество на складе",
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                CncTextField(
+                    value = minStockText,
+                    onValueChange = { minStockText = it.filter { ch -> ch.isDigit() } },
+                    label = "Мин. остаток для предупреждения",
+                )
+            }
+
+            if (sheetMode == "edit" && editing != null && formType == CatalogType.plate) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Совместимый инструмент",
+                    color = CncOnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (allTools.isEmpty()) {
+                    Text("Нет позиций инструмента", color = CncOnSurfaceSecondary, fontSize = 13.sp)
+                } else {
+                    allTools.forEach { tool ->
+                        val checked = tool.id in linkedToolIds
+                        CompatibilityRow(
+                            title = tool.name,
+                            checked = checked,
+                            onCheckedChange = { next ->
+                                scope.launch {
+                                    repo.setCompatible(
+                                        toolId = tool.id,
+                                        plateId = editing!!.id,
+                                        linked = next,
+                                    )
+                                }
+                            },
+                        )
                     }
-                    when (result) {
-                        is AppResult.Ok -> sheetMode = null
-                        is AppResult.Err -> onError(result.message)
-                    }
-                    busy = false
                 }
-            },
-        )
+            }
+
+            if (sheetMode == "edit" && editing != null && formType == CatalogType.tool) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Совместимые пластины",
+                    color = CncOnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (allPlates.isEmpty()) {
+                    Text("Нет пластин", color = CncOnSurfaceSecondary, fontSize = 13.sp)
+                } else {
+                    allPlates.forEach { plate ->
+                        val checked = plate.id in linkedPlateIds
+                        CompatibilityRow(
+                            title = plate.name,
+                            checked = checked,
+                            badge = {
+                                PlateStockBadge(
+                                    stockQty = plate.stockQty,
+                                    minStockThreshold = plate.minStockThreshold,
+                                )
+                            },
+                            onCheckedChange = { next ->
+                                scope.launch {
+                                    repo.setCompatible(
+                                        toolId = editing!!.id,
+                                        plateId = plate.id,
+                                        linked = next,
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            PrimaryButton(
+                text = if (sheetMode == "edit") "Сохранить" else "Создать",
+                busy = busy,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        val plateStock = if (formType == CatalogType.plate) {
+                            parsePlateStock(stockQtyText, minStockText)
+                        } else {
+                            null
+                        }
+                        if (plateStock is AppResult.Err) {
+                            onError(plateStock.message)
+                            busy = false
+                            return@launch
+                        }
+                        val stockPair = (plateStock as? AppResult.Ok)?.value
+
+                        val result = if (sheetMode == "edit" && editing != null) {
+                            when (val r = repo.update(editing!!.id, name, note)) {
+                                is AppResult.Err -> r
+                                is AppResult.Ok -> {
+                                    if (stockPair != null) {
+                                        repo.updateStock(
+                                            editing!!.id,
+                                            stockPair.first,
+                                            stockPair.second,
+                                        )
+                                    } else {
+                                        AppResult.Ok(Unit)
+                                    }
+                                }
+                            }
+                        } else {
+                            when (val r = repo.create(activeType, name, note)) {
+                                is AppResult.Err -> r
+                                is AppResult.Ok -> {
+                                    if (stockPair != null) {
+                                        repo.updateStock(r.value, stockPair.first, stockPair.second)
+                                    } else {
+                                        AppResult.Ok(Unit)
+                                    }
+                                }
+                            }
+                        }
+                        when (result) {
+                            is AppResult.Ok -> sheetMode = null
+                            is AppResult.Err -> onError(result.message)
+                        }
+                        busy = false
+                    }
+                },
+            )
+        }
     }
 
     ConfirmDialog(
@@ -283,4 +452,93 @@ fun CatalogScreen(
             }
         },
     )
+}
+
+private fun parsePlateStock(
+    stockQtyText: String,
+    minStockText: String,
+): AppResult<Pair<Int?, Int>> {
+    val stockTrim = stockQtyText.trim()
+    val stockQty = if (stockTrim.isEmpty()) {
+        null
+    } else {
+        stockTrim.toIntOrNull()
+            ?: return AppResult.Err("Количество должно быть числом")
+    }
+    if (stockQty != null && stockQty < 0) {
+        return AppResult.Err("Количество не может быть отрицательным")
+    }
+    val minTrim = minStockText.trim()
+    val minStock = if (minTrim.isEmpty()) {
+        3
+    } else {
+        minTrim.toIntOrNull()
+            ?: return AppResult.Err("Порог должен быть числом")
+    }
+    if (minStock < 0) {
+        return AppResult.Err("Порог не может быть отрицательным")
+    }
+    return AppResult.Ok(stockQty to minStock)
+}
+
+@Composable
+private fun PlateStockBadge(
+    stockQty: Int?,
+    minStockThreshold: Int,
+) {
+    if (stockQty == null) return
+    val low = stockQty < minStockThreshold
+    val bg = if (low) CncDanger.copy(alpha = 0.14f) else CncSkeleton
+    val fg = if (low) CncDanger else CncOnSurfaceSecondary
+    val label = if (low) "Осталось: $stockQty шт" else "$stockQty шт"
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (low) {
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = CncDanger,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+        Text(label, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun CompatibilityRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    badge: @Composable (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = CncPrimary,
+                uncheckedColor = CncBorder,
+            ),
+        )
+        Text(
+            title,
+            color = CncOnSurface,
+            modifier = Modifier.weight(1f),
+            fontSize = 14.sp,
+        )
+        badge?.invoke()
+    }
 }

@@ -19,4 +19,7 @@ data class CatalogItemEntity(
     val type: CatalogType,
     val name: String,
     val note: String? = null,
+    /** null = stock is not tracked (plates only). */
+    val stockQty: Int? = null,
+    val minStockThreshold: Int = 3,
 )

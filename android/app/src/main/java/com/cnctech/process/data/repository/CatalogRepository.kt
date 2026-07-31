@@ -3,6 +3,7 @@ package com.cnctech.process.data.repository
 import android.net.Uri
 import androidx.room.withTransaction
 import com.cnctech.process.data.db.AppDatabase
+import com.cnctech.process.data.entity.CatalogCompatibilityEntity
 import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogItemPhotoEntity
 import com.cnctech.process.data.entity.CatalogType
@@ -134,5 +135,35 @@ class CatalogRepository(
         val item = dao.getById(id) ?: return AppResult.Err("Не найден $fieldName")
         if (item.type != expected) return AppResult.Err("Некорректный тип $fieldName")
         return AppResult.Ok(item)
+    }
+
+    fun observeCompatibleTools(plateId: Long): Flow<List<CatalogItemEntity>> =
+        dao.observeCompatibleTools(plateId)
+
+    fun observeCompatiblePlates(toolId: Long): Flow<List<CatalogItemEntity>> =
+        dao.observeCompatiblePlates(toolId)
+
+    suspend fun setCompatible(toolId: Long, plateId: Long, linked: Boolean) {
+        if (linked) {
+            dao.insertCompatibility(CatalogCompatibilityEntity(toolId = toolId, plateId = plateId))
+        } else {
+            dao.deleteCompatibility(toolId = toolId, plateId = plateId)
+        }
+    }
+
+    suspend fun updateStock(
+        id: Long,
+        stockQty: Int?,
+        minStockThreshold: Int,
+    ): AppResult<Unit> {
+        if (stockQty != null && stockQty < 0) {
+            return AppResult.Err("Количество не может быть отрицательным")
+        }
+        if (minStockThreshold < 0) {
+            return AppResult.Err("Порог не может быть отрицательным")
+        }
+        val existing = dao.getById(id) ?: return AppResult.Err("Позиция не найдена")
+        dao.update(existing.copy(stockQty = stockQty, minStockThreshold = minStockThreshold))
+        return AppResult.Ok(Unit)
     }
 }
