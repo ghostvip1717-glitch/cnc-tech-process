@@ -2,6 +2,7 @@ package com.cnctech.process.data.photo
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.FileProvider
 import java.io.File
 import java.util.UUID
 
@@ -15,6 +16,21 @@ class PhotoStorage(private val context: Context) {
     fun catalogDir(catalogItemId: Long): File =
         File(photosRoot, "catalog/$catalogItemId").also { it.mkdirs() }
 
+    /**
+     * Temp JPEG in cacheDir/camera for TakePicture.
+     * Returns FileProvider content Uri; [CaptureTarget.file] should be deleted after copy/cancel.
+     */
+    fun createCaptureUri(context: Context = this.context): CaptureTarget {
+        val dir = File(context.cacheDir, "camera").also { it.mkdirs() }
+        val file = File(dir, "capture_${UUID.randomUUID()}.jpg")
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+        return CaptureTarget(uri = uri, file = file)
+    }
+
     fun copyFromUri(uri: Uri, targetDir: File, extensionHint: String? = null): File {
         targetDir.mkdirs()
         val ext = extensionHint?.takeIf { it.isNotBlank() } ?: guessExtension(uri) ?: "jpg"
@@ -27,6 +43,10 @@ class PhotoStorage(private val context: Context) {
 
     fun deleteFile(path: String) {
         runCatching { File(path).takeIf { it.exists() }?.delete() }
+    }
+
+    fun deleteFile(file: File) {
+        runCatching { file.takeIf { it.exists() }?.delete() }
     }
 
     fun deleteDir(dir: File) {
@@ -59,3 +79,8 @@ class PhotoStorage(private val context: Context) {
         }
     }
 }
+
+data class CaptureTarget(
+    val uri: Uri,
+    val file: File,
+)

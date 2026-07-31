@@ -1,11 +1,13 @@
 package com.cnctech.process.ui.screens.catalog
 
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,10 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.cnctech.process.CncApp
 import com.cnctech.process.data.entity.CatalogItemPhotoEntity
+import com.cnctech.process.data.photo.CaptureTarget
 import com.cnctech.process.data.repository.AppResult
 import com.cnctech.process.ui.components.ConfirmDialog
 import com.cnctech.process.ui.components.EmptyText
@@ -56,11 +60,18 @@ fun CatalogGalleryScreen(
     onError: (String) -> Unit,
     onOpenPhoto: (Int) -> Unit,
 ) {
+    val context = LocalContext.current
     val repo = CncApp.instance.catalogRepository
+    val photoStorage = CncApp.instance.photoStorage
     val photos by repo.observePhotos(catalogItemId).collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<CatalogItemPhotoEntity?>(null) }
+    var cameraCapture by remember { mutableStateOf<CaptureTarget?>(null) }
+
+    val hasCamera = remember {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+    }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -74,6 +85,26 @@ fun CatalogGalleryScreen(
         }
     }
 
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { saved: Boolean ->
+        val capture = cameraCapture
+        cameraCapture = null
+        if (saved && capture != null) {
+            scope.launch {
+                busy = true
+                when (val r = repo.addPhoto(catalogItemId, capture.uri)) {
+                    is AppResult.Ok -> Unit
+                    is AppResult.Err -> onError(r.message)
+                }
+                photoStorage.deleteFile(capture.file)
+                busy = false
+            }
+        } else {
+            capture?.file?.let { photoStorage.deleteFile(it) }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -82,7 +113,29 @@ fun CatalogGalleryScreen(
     ) {
         Text(title, color = CncOnSurface)
         Spacer(modifier = Modifier.height(12.dp))
-        PrimaryButton(text = "Загрузить фото", busy = busy, onClick = { picker.launch("image/*") })
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (hasCamera) {
+                PrimaryButton(
+                    text = "Сделать фото",
+                    busy = busy,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        val capture = photoStorage.createCaptureUri(context)
+                        cameraCapture = capture
+                        cameraLauncher.launch(capture.uri)
+                    },
+                )
+            }
+            PrimaryButton(
+                text = "Загрузить фото",
+                busy = busy,
+                modifier = if (hasCamera) Modifier.weight(1f) else Modifier,
+                onClick = { picker.launch("image/*") },
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
         if (photos.isEmpty()) {
             EmptyText("Нет фото")
