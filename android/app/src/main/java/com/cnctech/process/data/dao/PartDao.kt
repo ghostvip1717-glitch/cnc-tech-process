@@ -57,4 +57,10 @@ interface PartDao {
 
     @Query("SELECT * FROM part_photos")
     suspend fun getAllPhotos(): List<PartPhotoEntity>
+
+    @Query("DELETE FROM part_photos")
+    suspend fun clearAllPhotos()
+
+    @Query("DELETE FROM parts")
+    suspend fun clearAll()
 }

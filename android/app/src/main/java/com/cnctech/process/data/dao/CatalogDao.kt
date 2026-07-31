@@ -95,4 +95,10 @@ interface CatalogDao {
         """,
     )
     suspend fun getFirstPhotos(): List<CatalogItemPhotoEntity>
+
+    @Query("DELETE FROM catalog_item_photos")
+    suspend fun clearAllPhotos()
+
+    @Query("DELETE FROM catalog_items")
+    suspend fun clearAll()
 }

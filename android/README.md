@@ -5,19 +5,19 @@
 
 ## Навигация
 
-- Старт: экран «Детали» (список).
-- Боковая шторка (`ModalNavigationDrawer`) по ☰ на верхнеуровневых экранах:
-  - **Детали**
-  - **Инструмент** (вкладки tool / plate / jaw)
-  - **Настройки** (экспорт/импорт ZIP)
-- Переключение пункта шторки сбрасывает стек раздела.
-- Внутри разделов — стек с «← Назад» (карточка детали, ТП, галереи и т.д.).
+- Старт: экран «Детали».
+- Шторка ☰: **Детали**, **Инструмент**, **Настройки**.
+- Внутри разделов — стек с «← Назад».
+
+## Темы
+
+В **Настройки → Стиль приложения** — 8 тем (Индустриальный, Графит, OLED, Неон, Янтарь, Изумруд, Ультрафиолет, Светлый). Выбор сохраняется в SharedPreferences.
 
 ## Требования
 
 - JDK 17+
 - Android SDK (API 26–35)
-- `local.properties` с `sdk.dir=...` (создаётся локально, не в git)
+- `local.properties` с `sdk.dir=...` (локально, не в git)
 
 ## Сборка debug APK
 
@@ -26,17 +26,21 @@ cd android
 ./gradlew assembleDebug
 ```
 
-APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+APK: `android/app/build/outputs/apk/debug/app-debug.apk`  
+Готовая сборка: `android/dist/cnc-tech-process-debug.apk`
 
-Готовая сборка в ветке PR также лежит в `android/dist/cnc-tech-process-debug.apk`.
+## Перенос данных из Telegram/Sheets
 
-## Установка на телефон
+```bash
+cd android/tools
+pip install -r requirements.txt
+python export_from_sheets.py --out ../dist/migration.zip
+```
 
-1. Скопируйте APK на телефон.
-2. Откройте файл и установите (разрешите установку из неизвестных источников).
-3. Пакет: `com.cnctech.process`
+В приложении: **Настройки → Импортировать из старой версии** → выбрать `migration.zip`.
+
+Готовый экспорт (снимок): `android/dist/migration.zip`.
 
 ## Резервные копии
 
-Экран **Настройки** в шторке: ZIP с `database/cnc_tech_process.db` и `photos/**`.
-Имя файла: `cnc-tech-process-backup-yyyyMMdd-HHmmss.zip`.
+**Настройки**: экспорт/импорт ZIP базы Room + фото (`cnc-tech-process-backup-*.zip`).

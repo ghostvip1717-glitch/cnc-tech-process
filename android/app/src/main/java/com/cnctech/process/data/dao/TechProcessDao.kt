@@ -79,4 +79,13 @@ interface TechProcessDao {
         """,
     )
     suspend fun getOperationsForTechProcess(techProcessId: Long): List<OperationEntity>
+
+    @Query("DELETE FROM operations")
+    suspend fun clearAllOperations()
+
+    @Query("DELETE FROM setups")
+    suspend fun clearAllSetups()
+
+    @Query("DELETE FROM tech_processes")
+    suspend fun clearAllTechProcesses()
 }

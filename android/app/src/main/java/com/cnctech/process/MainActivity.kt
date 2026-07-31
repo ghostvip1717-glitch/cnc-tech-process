@@ -53,13 +53,13 @@ import com.cnctech.process.ui.navigation.rootSection
 import com.cnctech.process.ui.navigation.title
 import com.cnctech.process.ui.navigation.toScreen
 import com.cnctech.process.ui.screens.assembly.AssemblyScreen
-import com.cnctech.process.ui.screens.backup.BackupScreen
 import com.cnctech.process.ui.screens.catalog.CatalogGalleryScreen
 import com.cnctech.process.ui.screens.catalog.CatalogScreen
 import com.cnctech.process.ui.screens.parts.PartDetailScreen
 import com.cnctech.process.ui.screens.parts.PartEditScreen
 import com.cnctech.process.ui.screens.parts.PartGalleryScreen
 import com.cnctech.process.ui.screens.parts.PartsListScreen
+import com.cnctech.process.ui.screens.settings.SettingsScreen
 import com.cnctech.process.ui.screens.techprocess.SetupScreen
 import com.cnctech.process.ui.screens.techprocess.TechProcessScreen
 import com.cnctech.process.ui.theme.CncBackground
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CncTheme {
+            CncTheme(variant = CncApp.instance.themeVariant) {
                 CncAppRoot()
             }
         }
@@ -220,7 +220,7 @@ private fun CncAppRoot() {
                             title = r.title,
                             onError = ::showError,
                         )
-                        Screen.Settings -> BackupScreen(
+                        Screen.Settings -> SettingsScreen(
                             onError = ::showError,
                             onInfo = ::showInfo,
                         )

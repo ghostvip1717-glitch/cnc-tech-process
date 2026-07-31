@@ -34,6 +34,14 @@ class PhotoStorage(private val context: Context) {
         dir.walkBottomUp().forEach { it.delete() }
     }
 
+    fun copyFile(source: File, targetDir: File, preferredName: String? = null): File {
+        targetDir.mkdirs()
+        val ext = source.extension.ifBlank { "jpg" }
+        val target = File(targetDir, preferredName ?: "${UUID.randomUUID()}.$ext")
+        source.copyTo(target, overwrite = true)
+        return target
+    }
+
     fun clearAllPhotos() {
         deleteDir(photosRoot)
         photosRoot.mkdirs()
