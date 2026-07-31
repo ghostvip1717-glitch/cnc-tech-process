@@ -15,3 +15,9 @@ sheets-backend/node_modules/
 sheets-backend/.clasp.json
 **/.clasprc.json
 /docs/
+
+# Android
+android/local.properties
+android/.gradle/
+android/**/build/
+android/*.apk

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No network: app is fully offline. Config present only to document intent. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors />
+    </base-config>
+</network-security-config>

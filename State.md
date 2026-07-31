@@ -32,3 +32,5 @@
 - 2026-07-24: deploy-frontend push race fix — pull --rebase retry x3; re-deploy UX static to root/Pages
 - 2026-07-24: fix dark-theme text on light cards — #16181c for hub/parts/catalog/TP/assembly titles
 - 2026-07-24: Drive photos — thumbnail URL + blocking share + backfillDrivePhotoPermissions one-off
+
+- 2026-07-31: Android offline APK — `android/` (Kotlin+Compose+Room), package `com.cnctech.process`, minSdk 26; локальные фото+backup ZIP; APK `android/app/build/outputs/apk/debug/app-debug.apk`

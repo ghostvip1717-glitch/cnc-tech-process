@@ -66,3 +66,13 @@ sheets-backend/     Apps Script API (единственный backend)
 - `TELEGRAM_AUTH_ENABLED=false` — отладка
 - `true` + нет валидного `initData` → 401
 - `/health` без auth
+
+## Android (offline APK)
+
+Отдельное нативное приложение без сети: каталог `android/`.
+
+```bash
+cd android && ./gradlew assembleDebug
+```
+
+APK: `android/app/build/outputs/apk/debug/app-debug.apk` (package `com.cnctech.process`). Подробности — `android/README.md`.
