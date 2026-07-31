@@ -1,7 +1,6 @@
 package com.cnctech.process.ui.navigation
 
 sealed class Screen {
-    data object Hub : Screen()
     data object Parts : Screen()
     data class Part(val partId: Long) : Screen()
     data class PartEdit(val partId: Long) : Screen()
@@ -11,11 +10,29 @@ sealed class Screen {
     data class Assembly(val partId: Long) : Screen()
     data object Catalog : Screen()
     data class CatalogGallery(val catalogItemId: Long, val title: String) : Screen()
-    data object Backup : Screen()
+    data object Settings : Screen()
+}
+
+/** Roots shown in the navigation drawer. */
+enum class RootSection {
+    Parts,
+    Catalog,
+    Settings,
+}
+
+fun Screen.isRoot(): Boolean = when (this) {
+    Screen.Parts, Screen.Catalog, Screen.Settings -> true
+    else -> false
+}
+
+fun Screen.rootSection(): RootSection = when (this) {
+    Screen.Parts, is Screen.Part, is Screen.PartEdit, is Screen.PartGallery,
+    is Screen.TechProcess, is Screen.Setup, is Screen.Assembly -> RootSection.Parts
+    Screen.Catalog, is Screen.CatalogGallery -> RootSection.Catalog
+    Screen.Settings -> RootSection.Settings
 }
 
 fun Screen.title(): String = when (this) {
-    Screen.Hub -> "Техпроцессы ЧПУ"
     Screen.Parts -> "Детали"
     is Screen.Part -> "Карточка детали"
     is Screen.PartEdit -> "Изменить деталь"
@@ -25,5 +42,11 @@ fun Screen.title(): String = when (this) {
     is Screen.Assembly -> "Сборка"
     Screen.Catalog -> "Инструмент"
     is Screen.CatalogGallery -> "Фото"
-    Screen.Backup -> "Резервная копия"
+    Screen.Settings -> "Настройки"
+}
+
+fun RootSection.toScreen(): Screen = when (this) {
+    RootSection.Parts -> Screen.Parts
+    RootSection.Catalog -> Screen.Catalog
+    RootSection.Settings -> Screen.Settings
 }

@@ -34,3 +34,5 @@
 - 2026-07-24: Drive photos — thumbnail URL + blocking share + backfillDrivePhotoPermissions one-off
 
 - 2026-07-31: Android offline APK — `android/` (Kotlin+Compose+Room), package `com.cnctech.process`, minSdk 26; локальные фото+backup ZIP; APK `android/app/build/outputs/apk/debug/app-debug.apk`
+
+- 2026-07-31: Android nav — ModalNavigationDrawer (Детали/Инструмент/Настройки), старт на списке деталей; PartEntity +machiningTimeMinutes/programCount + бейджи в списке; Hub убран

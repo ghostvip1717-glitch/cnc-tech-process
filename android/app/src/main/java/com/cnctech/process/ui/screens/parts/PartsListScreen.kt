@@ -29,12 +29,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.cnctech.process.CncApp
+import com.cnctech.process.data.entity.PartEntity
 import com.cnctech.process.data.repository.AppResult
 import com.cnctech.process.ui.components.CncBottomSheet
 import com.cnctech.process.ui.components.CncFab
@@ -42,9 +44,14 @@ import com.cnctech.process.ui.components.CncTextField
 import com.cnctech.process.ui.components.EmptyText
 import com.cnctech.process.ui.components.PrimaryButton
 import com.cnctech.process.ui.components.SkeletonStack
+import com.cnctech.process.ui.theme.CncBadgeProgramsBg
+import com.cnctech.process.ui.theme.CncBadgeProgramsText
+import com.cnctech.process.ui.theme.CncBadgeTimeBg
+import com.cnctech.process.ui.theme.CncBadgeTimeText
 import com.cnctech.process.ui.theme.CncBorder
 import com.cnctech.process.ui.theme.CncOnSurface
 import com.cnctech.process.ui.theme.CncOnSurfaceSecondary
+import com.cnctech.process.ui.theme.CncSkeleton
 import com.cnctech.process.ui.theme.CncSurface
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -68,7 +75,6 @@ fun PartsListScreen(
         queryFlow.flatMapLatest { q -> repo.observeParts(q) }
     }.collectAsState(initial = emptyList())
 
-    // debounce search
     androidx.compose.runtime.LaunchedEffect(search) {
         loading = true
         delay(350)
@@ -100,47 +106,12 @@ fun PartsListScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(parts, key = { it.part.id }) { item ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
-                                .background(CncSurface)
-                                .clickable { onOpenPart(item.part.id) }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            val cover = item.photos.firstOrNull()?.filePath
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(com.cnctech.process.ui.theme.CncSkeleton),
-                            ) {
-                                if (cover != null) {
-                                    AsyncImage(
-                                        model = File(cover),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "${item.part.number} — ${item.part.title}",
-                                    color = CncOnSurface,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 16.sp,
-                                )
-                                Text(
-                                    "Фото: ${item.photos.size}",
-                                    color = CncOnSurfaceSecondary,
-                                    fontSize = 14.sp,
-                                )
-                            }
-                        }
+                        PartListCard(
+                            part = item.part,
+                            coverPath = item.photos.firstOrNull()?.filePath,
+                            photoCount = item.photos.size,
+                            onClick = { onOpenPart(item.part.id) },
+                        )
                     }
                     item { Spacer(modifier = Modifier.height(72.dp)) }
                 }
@@ -175,4 +146,95 @@ fun PartsListScreen(
             },
         )
     }
+}
+
+@Composable
+private fun PartListCard(
+    part: PartEntity,
+    coverPath: String?,
+    photoCount: Int,
+    onClick: () -> Unit,
+) {
+    val minutes = part.machiningTimeMinutes
+    val programs = part.programCount
+    val hasBadges = minutes != null || programs != null
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
+            .background(CncSurface)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CncSkeleton),
+        ) {
+            if (coverPath != null) {
+                AsyncImage(
+                    model = File(coverPath),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "${part.number} — ${part.title}",
+                color = CncOnSurface,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+            )
+            if (hasBadges) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (minutes != null) {
+                        PartBadge(
+                            text = "$minutes мин",
+                            background = CncBadgeTimeBg,
+                            textColor = CncBadgeTimeText,
+                        )
+                    }
+                    if (programs != null) {
+                        PartBadge(
+                            text = "$programs прог.",
+                            background = CncBadgeProgramsBg,
+                            textColor = CncBadgeProgramsText,
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    "Фото: $photoCount",
+                    color = CncOnSurfaceSecondary,
+                    fontSize = 14.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PartBadge(
+    text: String,
+    background: Color,
+    textColor: Color,
+) {
+    Text(
+        text = text,
+        color = textColor,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(background)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    )
 }

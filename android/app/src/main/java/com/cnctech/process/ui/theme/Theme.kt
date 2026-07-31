@@ -19,6 +19,10 @@ val CncDanger = Color(0xFFD64545)
 val CncSkeleton = Color(0xFFECECEC)
 val CncHubGradientTop = Color(0xFFF7F9FC)
 val CncIconTintBg = Color(0xFF2481CC).copy(alpha = 0.14f)
+val CncBadgeTimeBg = Color(0xFFD8F0E0)
+val CncBadgeTimeText = Color(0xFF1B5E2A)
+val CncBadgeProgramsBg = Color(0xFFD9E6F2)
+val CncBadgeProgramsText = Color(0xFF1E3A5F)
 
 private val LightColors = lightColorScheme(
     primary = CncPrimary,

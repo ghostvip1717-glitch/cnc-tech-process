@@ -39,6 +39,8 @@ fun PartEditScreen(
     val scope = rememberCoroutineScope()
     var number by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
+    var machiningTime by remember { mutableStateOf("") }
+    var programCount by remember { mutableStateOf("") }
     var initialized by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -48,6 +50,8 @@ fun PartEditScreen(
         if (!initialized) {
             number = part.number
             title = part.title
+            machiningTime = part.machiningTimeMinutes?.toString().orEmpty()
+            programCount = part.programCount?.toString().orEmpty()
             initialized = true
         }
     }
@@ -69,6 +73,18 @@ fun PartEditScreen(
         CncTextField(value = number, onValueChange = { number = it }, label = "Номер")
         Spacer(modifier = Modifier.height(12.dp))
         CncTextField(value = title, onValueChange = { title = it }, label = "Название")
+        Spacer(modifier = Modifier.height(12.dp))
+        CncTextField(
+            value = machiningTime,
+            onValueChange = { machiningTime = it.filter { ch -> ch.isDigit() } },
+            label = "Время обработки, мин",
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        CncTextField(
+            value = programCount,
+            onValueChange = { programCount = it.filter { ch -> ch.isDigit() } },
+            label = "Количество программ",
+        )
         Spacer(modifier = Modifier.height(16.dp))
         PrimaryButton(
             text = "Сохранить",
@@ -76,7 +92,15 @@ fun PartEditScreen(
             onClick = {
                 scope.launch {
                     busy = true
-                    when (val r = repo.update(partId, number, title)) {
+                    when (
+                        val r = repo.update(
+                            partId = partId,
+                            number = number,
+                            title = title,
+                            machiningTimeMinutes = machiningTime.trim().toIntOrNull(),
+                            programCount = programCount.trim().toIntOrNull(),
+                        )
+                    ) {
                         is AppResult.Ok -> onSaved()
                         is AppResult.Err -> onError(r.message)
                     }

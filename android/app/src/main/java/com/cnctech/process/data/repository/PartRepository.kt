@@ -47,7 +47,13 @@ class PartRepository(
         if (t.isEmpty()) return AppResult.Err("Название обязательно")
         return try {
             val id = partDao.insert(
-                PartEntity(number = n, title = t, createdAt = System.currentTimeMillis()),
+                PartEntity(
+                    number = n,
+                    title = t,
+                    createdAt = System.currentTimeMillis(),
+                    machiningTimeMinutes = null,
+                    programCount = null,
+                ),
             )
             AppResult.Ok(id)
         } catch (_: Exception) {
@@ -55,14 +61,33 @@ class PartRepository(
         }
     }
 
-    suspend fun update(partId: Long, number: String, title: String): AppResult<Unit> {
+    suspend fun update(
+        partId: Long,
+        number: String,
+        title: String,
+        machiningTimeMinutes: Int?,
+        programCount: Int?,
+    ): AppResult<Unit> {
         val existing = partDao.getPart(partId) ?: return AppResult.Err("Деталь не найдена")
         val n = number.trim()
         val t = title.trim()
         if (n.isEmpty()) return AppResult.Err("Номер обязателен")
         if (t.isEmpty()) return AppResult.Err("Название обязательно")
+        if (machiningTimeMinutes != null && machiningTimeMinutes < 0) {
+            return AppResult.Err("Время обработки не может быть отрицательным")
+        }
+        if (programCount != null && programCount < 0) {
+            return AppResult.Err("Количество программ не может быть отрицательным")
+        }
         return try {
-            partDao.update(existing.copy(number = n, title = t))
+            partDao.update(
+                existing.copy(
+                    number = n,
+                    title = t,
+                    machiningTimeMinutes = machiningTimeMinutes,
+                    programCount = programCount,
+                ),
+            )
             AppResult.Ok(Unit)
         } catch (_: Exception) {
             AppResult.Err("Номер уже используется или ошибка сохранения")

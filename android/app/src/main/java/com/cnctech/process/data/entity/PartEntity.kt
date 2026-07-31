@@ -13,4 +13,6 @@ data class PartEntity(
     val number: String,
     val title: String,
     val createdAt: Long,
+    val machiningTimeMinutes: Int? = null,
+    val programCount: Int? = null,
 )

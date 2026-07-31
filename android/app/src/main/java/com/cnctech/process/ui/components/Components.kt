@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -70,6 +71,8 @@ fun AppHeader(
     title: String,
     showBack: Boolean,
     onBack: () -> Unit,
+    showMenu: Boolean = false,
+    onMenuClick: () -> Unit = {},
     actions: @Composable () -> Unit = {},
 ) {
     Row(
@@ -79,16 +82,26 @@ fun AppHeader(
             .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showBack) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад",
-                    tint = CncPrimary,
-                )
+        when {
+            showBack -> {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        tint = CncPrimary,
+                    )
+                }
             }
-        } else {
-            Spacer(modifier = Modifier.width(12.dp))
+            showMenu -> {
+                IconButton(onClick = onMenuClick) {
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = "Меню",
+                        tint = CncPrimary,
+                    )
+                }
+            }
+            else -> Spacer(modifier = Modifier.width(12.dp))
         }
         Text(
             text = title,
