@@ -2,6 +2,7 @@ package com.cnctech.process
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -39,15 +40,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cnctech.process.ui.components.AppHeader
 import com.cnctech.process.ui.components.AutoDismissSnackbarHost
+import com.cnctech.process.ui.components.FullscreenPhotoViewer
 import com.cnctech.process.ui.components.showAppError
 import com.cnctech.process.ui.navigation.RootSection
 import com.cnctech.process.ui.navigation.Screen
+import com.cnctech.process.ui.navigation.isPhotoViewer
 import com.cnctech.process.ui.navigation.isRoot
 import com.cnctech.process.ui.navigation.rootSection
 import com.cnctech.process.ui.navigation.title
@@ -68,6 +72,8 @@ import com.cnctech.process.ui.theme.CncOnSurface
 import com.cnctech.process.ui.theme.CncPrimary
 import com.cnctech.process.ui.theme.CncSurface
 import com.cnctech.process.ui.theme.CncTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -114,6 +120,9 @@ private fun CncAppRoot() {
         scope.launch { snackbar.showSnackbar(msg) }
     }
 
+    // Stack back for all non-root screens (incl. photo viewer while photos load).
+    BackHandler(enabled = !isRoot) { pop() }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = isRoot,
@@ -154,81 +163,119 @@ private fun CncAppRoot() {
             }
         },
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(CncBackground)
-                .statusBarsPadding()
-                .navigationBarsPadding(),
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                AppHeader(
-                    title = route.title(),
-                    showBack = !isRoot,
-                    onBack = { pop() },
-                    showMenu = isRoot,
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                )
-                Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                    when (val r = route) {
-                        Screen.Parts -> PartsListScreen(
-                            onOpenPart = { push(Screen.Part(it)) },
-                            onError = ::showError,
-                        )
-                        is Screen.Part -> PartDetailScreen(
-                            partId = r.partId,
-                            onEdit = { push(Screen.PartEdit(r.partId)) },
-                            onOpenGallery = { push(Screen.PartGallery(r.partId)) },
-                            onOpenTechProcess = { push(Screen.TechProcess(r.partId)) },
-                            onOpenAssembly = { push(Screen.Assembly(r.partId)) },
-                        )
-                        is Screen.PartEdit -> PartEditScreen(
-                            partId = r.partId,
-                            onSaved = { pop() },
-                            onDeleted = {
-                                if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
-                                if (stack.isNotEmpty() && stack.last() is Screen.Part) {
-                                    stack.removeAt(stack.lastIndex)
-                                }
-                            },
-                            onError = ::showError,
-                        )
-                        is Screen.PartGallery -> PartGalleryScreen(
-                            partId = r.partId,
-                            onError = ::showError,
-                        )
-                        is Screen.TechProcess -> TechProcessScreen(
-                            partId = r.partId,
-                            onOpenSetup = { setupId -> push(Screen.Setup(r.partId, setupId)) },
-                            onError = ::showError,
-                        )
-                        is Screen.Setup -> SetupScreen(
-                            setupId = r.setupId,
-                            onDeleted = { pop() },
-                            onError = ::showError,
-                        )
-                        is Screen.Assembly -> AssemblyScreen(
-                            partId = r.partId,
-                            onError = ::showError,
-                        )
-                        Screen.Catalog -> CatalogScreen(
-                            onOpenGallery = { id, title -> push(Screen.CatalogGallery(id, title)) },
-                            onError = ::showError,
-                        )
-                        is Screen.CatalogGallery -> CatalogGalleryScreen(
-                            catalogItemId = r.catalogItemId,
-                            title = r.title,
-                            onError = ::showError,
-                        )
-                        Screen.Settings -> SettingsScreen(
-                            onError = ::showError,
-                            onInfo = ::showInfo,
+        if (route.isPhotoViewer()) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                when (val r = route) {
+                    is Screen.PartPhotoViewer -> {
+                        val data by CncApp.instance.partRepository
+                            .observePart(r.partId)
+                            .collectAsState(initial = null)
+                        // Wait until part is loaded so we don't close on the initial null emission.
+                        if (data != null) {
+                            FullscreenPhotoViewer(
+                                photoPaths = data!!.photos.map { it.filePath },
+                                startIndex = r.startIndex,
+                                onClose = { pop() },
+                            )
+                        }
+                    }
+                    is Screen.CatalogPhotoViewer -> {
+                        val photos by CncApp.instance.catalogRepository
+                            .observePhotos(r.catalogItemId)
+                            .collectAsState(initial = emptyList())
+                        FullscreenPhotoViewer(
+                            photoPaths = photos.map { it.filePath },
+                            startIndex = r.startIndex,
+                            onClose = { pop() },
                         )
                     }
+                    else -> Unit
                 }
             }
-            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                AutoDismissSnackbarHost(hostState = snackbar)
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CncBackground)
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    AppHeader(
+                        title = route.title(),
+                        showBack = !isRoot,
+                        onBack = { pop() },
+                        showMenu = isRoot,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                    )
+                    Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                        when (val r = route) {
+                            Screen.Parts -> PartsListScreen(
+                                onOpenPart = { push(Screen.Part(it)) },
+                                onError = ::showError,
+                            )
+                            is Screen.Part -> PartDetailScreen(
+                                partId = r.partId,
+                                onEdit = { push(Screen.PartEdit(r.partId)) },
+                                onOpenGallery = { push(Screen.PartGallery(r.partId)) },
+                                onOpenTechProcess = { push(Screen.TechProcess(r.partId)) },
+                                onOpenAssembly = { push(Screen.Assembly(r.partId)) },
+                            )
+                            is Screen.PartEdit -> PartEditScreen(
+                                partId = r.partId,
+                                onSaved = { pop() },
+                                onDeleted = {
+                                    if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                                    if (stack.isNotEmpty() && stack.last() is Screen.Part) {
+                                        stack.removeAt(stack.lastIndex)
+                                    }
+                                },
+                                onError = ::showError,
+                            )
+                            is Screen.PartGallery -> PartGalleryScreen(
+                                partId = r.partId,
+                                onError = ::showError,
+                                onOpenPhoto = { index ->
+                                    push(Screen.PartPhotoViewer(r.partId, index))
+                                },
+                            )
+                            is Screen.TechProcess -> TechProcessScreen(
+                                partId = r.partId,
+                                onOpenSetup = { setupId -> push(Screen.Setup(r.partId, setupId)) },
+                                onError = ::showError,
+                            )
+                            is Screen.Setup -> SetupScreen(
+                                setupId = r.setupId,
+                                onDeleted = { pop() },
+                                onError = ::showError,
+                            )
+                            is Screen.Assembly -> AssemblyScreen(
+                                partId = r.partId,
+                                onError = ::showError,
+                            )
+                            Screen.Catalog -> CatalogScreen(
+                                onOpenGallery = { id, title -> push(Screen.CatalogGallery(id, title)) },
+                                onError = ::showError,
+                            )
+                            is Screen.CatalogGallery -> CatalogGalleryScreen(
+                                catalogItemId = r.catalogItemId,
+                                title = r.title,
+                                onError = ::showError,
+                                onOpenPhoto = { index ->
+                                    push(Screen.CatalogPhotoViewer(r.catalogItemId, index))
+                                },
+                            )
+                            Screen.Settings -> SettingsScreen(
+                                onError = ::showError,
+                                onInfo = ::showInfo,
+                            )
+                            is Screen.PartPhotoViewer, is Screen.CatalogPhotoViewer -> Unit
+                        }
+                    }
+                }
+                Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    AutoDismissSnackbarHost(hostState = snackbar)
+                }
             }
         }
     }

@@ -38,3 +38,4 @@
 - 2026-07-31: Android nav — ModalNavigationDrawer (Детали/Инструмент/Настройки), старт на списке деталей; PartEntity +machiningTimeMinutes/programCount + бейджи в списке; Hub убран
 
 - 2026-07-31: Android 8 тем (LocalCncColors/ThemePrefs) + SettingsScreen; MigrationImporter + tools/export_from_sheets.py; dist/migration.zip (3 parts/17 catalog/1 TP)
+- 2026-07-31: FullscreenPhotoViewer — pinch-zoom+pager; Screen.Part/CatalogPhotoViewer; tap preview in galleries; edge-to-edge без AppHeader

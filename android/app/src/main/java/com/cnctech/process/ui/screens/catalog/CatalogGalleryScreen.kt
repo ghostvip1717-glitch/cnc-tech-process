@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +54,7 @@ fun CatalogGalleryScreen(
     catalogItemId: Long,
     title: String,
     onError: (String) -> Unit,
+    onOpenPhoto: (Int) -> Unit,
 ) {
     val repo = CncApp.instance.catalogRepository
     val photos by repo.observePhotos(catalogItemId).collectAsState(initial = emptyList())
@@ -97,6 +99,7 @@ fun CatalogGalleryScreen(
                     }
                 },
             ) { photo, handle ->
+                val index = photos.indexOfFirst { it.id == photo.id }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -110,7 +113,10 @@ fun CatalogGalleryScreen(
                     AsyncImage(
                         model = File(photo.filePath),
                         contentDescription = null,
-                        modifier = Modifier.size(88.dp).clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier
+                            .size(88.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = index >= 0) { onOpenPhoto(index) },
                         contentScale = ContentScale.Crop,
                     )
                     Spacer(modifier = Modifier.weight(1f))
