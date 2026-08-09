@@ -1,0 +1,438 @@
+package com.cnctech.process
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.PrecisionManufacturing
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewComfy
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.cnctech.process.data.prefs.LayoutMode
+import com.cnctech.process.data.prefs.LayoutPrefs
+import com.cnctech.process.ui.components.AppHeader
+import com.cnctech.process.ui.components.AutoDismissSnackbarHost
+import com.cnctech.process.ui.components.FullscreenPhotoViewer
+import com.cnctech.process.ui.components.showAppError
+import com.cnctech.process.ui.navigation.RootSection
+import com.cnctech.process.ui.navigation.Screen
+import com.cnctech.process.ui.navigation.isPhotoViewer
+import com.cnctech.process.ui.navigation.isRoot
+import com.cnctech.process.ui.navigation.rootSection
+import com.cnctech.process.ui.navigation.title
+import com.cnctech.process.ui.navigation.toScreen
+import com.cnctech.process.ui.screens.assembly.AssemblyScreen
+import com.cnctech.process.ui.screens.catalog.CatalogItemDetailScreen
+import com.cnctech.process.ui.screens.catalog.CatalogScreen
+import com.cnctech.process.ui.screens.parts.PartDetailScreen
+import com.cnctech.process.ui.screens.parts.PartEditScreen
+import com.cnctech.process.ui.screens.parts.PartsListScreen
+import com.cnctech.process.ui.screens.settings.SettingsScreen
+import com.cnctech.process.ui.screens.techprocess.SetupDetailScreen
+import com.cnctech.process.ui.screens.techprocess.SetupScreen
+import com.cnctech.process.ui.screens.techprocess.TechProcessScreen
+import com.cnctech.process.ui.theme.CncBackground
+import com.cnctech.process.ui.theme.CncIconTintBg
+import com.cnctech.process.ui.theme.CncOnSurface
+import com.cnctech.process.ui.theme.CncPrimary
+import com.cnctech.process.ui.theme.CncSurface
+import com.cnctech.process.ui.theme.CncTheme
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            CncTheme(variant = CncApp.instance.themeVariant) {
+                CncAppRoot()
+            }
+        }
+    }
+}
+
+@Composable
+private fun CncAppRoot() {
+    val context = LocalContext.current
+    val stack = remember { mutableStateListOf<Screen>(Screen.Parts) }
+    val route = stack.last()
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val isRoot = route.isRoot()
+    val currentRoot = route.rootSection()
+
+    var partsLayout by remember { mutableStateOf(LayoutMode.List) }
+    var catalogLayout by remember { mutableStateOf(LayoutMode.List) }
+    LaunchedEffect(Unit) {
+        partsLayout = LayoutPrefs.getPartsLayout(context)
+        catalogLayout = LayoutPrefs.getCatalogLayout(context)
+    }
+
+    fun push(screen: Screen) {
+        stack.add(screen)
+    }
+
+    fun pop() {
+        if (stack.size > 1) stack.removeAt(stack.lastIndex)
+    }
+
+    fun switchRoot(section: RootSection) {
+        stack.clear()
+        stack.add(section.toScreen())
+        scope.launch { drawerState.close() }
+    }
+
+    fun showError(msg: String) {
+        scope.launch { snackbar.showAppError(msg) }
+    }
+
+    fun showInfo(msg: String) {
+        scope.launch { snackbar.showSnackbar(msg) }
+    }
+
+    // Stack back for all non-root screens (incl. photo viewer while photos load).
+    BackHandler(enabled = !isRoot) { pop() }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = isRoot,
+        drawerContent = {
+            ModalDrawerSheet(
+                drawerContainerColor = CncSurface,
+                drawerContentColor = CncOnSurface,
+                modifier = Modifier.width(300.dp).fillMaxHeight(),
+            ) {
+                Column(modifier = Modifier.padding(vertical = 12.dp)) {
+                    Text(
+                        text = "Техпроцессы ЧПУ",
+                        color = CncOnSurface,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                    )
+                    DrawerItem(
+                        icon = Icons.Default.PrecisionManufacturing,
+                        label = "Детали",
+                        selected = currentRoot == RootSection.Parts,
+                        onClick = { switchRoot(RootSection.Parts) },
+                    )
+                    DrawerItem(
+                        icon = Icons.Default.Build,
+                        label = "Инструмент",
+                        selected = currentRoot == RootSection.Catalog,
+                        onClick = { switchRoot(RootSection.Catalog) },
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp))
+                    DrawerItem(
+                        icon = Icons.Default.Settings,
+                        label = "Настройки",
+                        selected = currentRoot == RootSection.Settings,
+                        onClick = { switchRoot(RootSection.Settings) },
+                    )
+                }
+            }
+        },
+    ) {
+        if (route.isPhotoViewer()) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                when (val r = route) {
+                    is Screen.PartPhotoViewer -> {
+                        val data by CncApp.instance.partRepository
+                            .observePart(r.partId)
+                            .collectAsState(initial = null)
+                        // Wait until part is loaded so we don't close on the initial null emission.
+                        if (data != null) {
+                            FullscreenPhotoViewer(
+                                photoPaths = data!!.photos.map { it.filePath },
+                                startIndex = r.startIndex,
+                                onClose = { pop() },
+                            )
+                        }
+                    }
+                    is Screen.CatalogPhotoViewer -> {
+                        val photos by CncApp.instance.catalogRepository
+                            .observePhotos(r.catalogItemId)
+                            .collectAsState(initial = emptyList())
+                        FullscreenPhotoViewer(
+                            photoPaths = photos.map { it.filePath },
+                            startIndex = r.startIndex,
+                            onClose = { pop() },
+                        )
+                    }
+                    is Screen.SetupPhotoViewer -> {
+                        val photos by CncApp.instance.techProcessRepository
+                            .observeSetupPhotos(r.setupId)
+                            .collectAsState(initial = emptyList())
+                        FullscreenPhotoViewer(
+                            photoPaths = photos.map { it.filePath },
+                            startIndex = r.startIndex,
+                            onClose = { pop() },
+                        )
+                    }
+                    is Screen.OperationPhotoViewer -> {
+                        val photos by CncApp.instance.techProcessRepository
+                            .observeOperationPhotos(r.operationId)
+                            .collectAsState(initial = emptyList())
+                        FullscreenPhotoViewer(
+                            photoPaths = photos.map { it.filePath },
+                            startIndex = r.startIndex,
+                            onClose = { pop() },
+                        )
+                    }
+                    else -> Unit
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CncBackground)
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    AppHeader(
+                        title = route.title(),
+                        showBack = !isRoot,
+                        onBack = { pop() },
+                        showMenu = isRoot,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        actions = {
+                            when (route) {
+                                Screen.Parts -> {
+                                    LayoutToggleButton(
+                                        mode = partsLayout,
+                                        onClick = {
+                                            val next = partsLayout.next()
+                                            partsLayout = next
+                                            LayoutPrefs.setPartsLayout(context, next)
+                                        },
+                                    )
+                                }
+                                is Screen.Catalog -> {
+                                    LayoutToggleButton(
+                                        mode = catalogLayout,
+                                        onClick = {
+                                            val next = catalogLayout.next()
+                                            catalogLayout = next
+                                            LayoutPrefs.setCatalogLayout(context, next)
+                                        },
+                                    )
+                                }
+                                else -> Unit
+                            }
+                        },
+                    )
+                    Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                        when (val r = route) {
+                            Screen.Parts -> PartsListScreen(
+                                layoutMode = partsLayout,
+                                onOpenPart = { push(Screen.Part(it)) },
+                                onCreated = { id -> push(Screen.Part(id)) },
+                                onError = ::showError,
+                            )
+                            is Screen.Part -> PartDetailScreen(
+                                partId = r.partId,
+                                onEdit = { push(Screen.PartEdit(r.partId)) },
+                                onOpenPhoto = { index -> push(Screen.PartPhotoViewer(r.partId, index)) },
+                                onOpenTechProcess = { push(Screen.TechProcess(r.partId)) },
+                                onOpenAssembly = { push(Screen.Assembly(r.partId)) },
+                                onError = ::showError,
+                            )
+                            is Screen.PartEdit -> PartEditScreen(
+                                partId = r.partId,
+                                onSaved = { pop() },
+                                onDeleted = {
+                                    if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                                    if (stack.isNotEmpty() && stack.last() is Screen.Part) {
+                                        stack.removeAt(stack.lastIndex)
+                                    }
+                                },
+                                onError = ::showError,
+                            )
+                            is Screen.TechProcess -> TechProcessScreen(
+                                partId = r.partId,
+                                onOpenSetup = { setupId -> push(Screen.Setup(r.partId, setupId)) },
+                                onCreated = { setupId -> push(Screen.SetupEdit(r.partId, setupId)) },
+                                onError = ::showError,
+                            )
+                            is Screen.Setup -> SetupDetailScreen(
+                                setupId = r.setupId,
+                                onEdit = { push(Screen.SetupEdit(r.partId, r.setupId)) },
+                                onOpenSetupPhoto = { index ->
+                                    push(Screen.SetupPhotoViewer(r.setupId, index))
+                                },
+                                onOpenOperationPhoto = { operationId, index ->
+                                    push(Screen.OperationPhotoViewer(operationId, index))
+                                },
+                                onOpenCatalogPhoto = { catalogItemId, index ->
+                                    push(Screen.CatalogPhotoViewer(catalogItemId, index))
+                                },
+                                onError = ::showError,
+                            )
+                            is Screen.SetupEdit -> SetupScreen(
+                                setupId = r.setupId,
+                                onDeleted = {
+                                    if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                                    if (stack.isNotEmpty() && stack.last() is Screen.Setup) {
+                                        stack.removeAt(stack.lastIndex)
+                                    }
+                                },
+                                onOpenCatalogPhoto = { catalogItemId, index ->
+                                    push(Screen.CatalogPhotoViewer(catalogItemId, index))
+                                },
+                                onOpenSetupPhoto = { index ->
+                                    push(Screen.SetupPhotoViewer(r.setupId, index))
+                                },
+                                onOpenOperationPhoto = { operationId, index ->
+                                    push(Screen.OperationPhotoViewer(operationId, index))
+                                },
+                                onError = ::showError,
+                            )
+                            is Screen.Assembly -> AssemblyScreen(
+                                partId = r.partId,
+                                onError = ::showError,
+                            )
+                            is Screen.Catalog -> CatalogScreen(
+                                activeType = r.activeType,
+                                layoutMode = catalogLayout,
+                                onActiveTypeChange = { type ->
+                                    if (stack.isNotEmpty() && stack.last() is Screen.Catalog) {
+                                        stack[stack.lastIndex] = Screen.Catalog(type)
+                                    }
+                                },
+                                onOpenItem = { id -> push(Screen.CatalogItemDetail(id)) },
+                                onCreated = { id -> push(Screen.CatalogItemDetail(id)) },
+                                onError = ::showError,
+                            )
+                            is Screen.CatalogItemDetail -> CatalogItemDetailScreen(
+                                catalogItemId = r.catalogItemId,
+                                onEdit = {},
+                                onError = ::showError,
+                                onOpenPhoto = { index ->
+                                    push(Screen.CatalogPhotoViewer(r.catalogItemId, index))
+                                },
+                                onOpenRelated = { id -> push(Screen.CatalogItemDetail(id)) },
+                            )
+                            Screen.Settings -> SettingsScreen(
+                                onError = ::showError,
+                                onInfo = ::showInfo,
+                            )
+                            is Screen.PartPhotoViewer,
+                            is Screen.CatalogPhotoViewer,
+                            is Screen.SetupPhotoViewer,
+                            is Screen.OperationPhotoViewer -> Unit
+                        }
+                    }
+                }
+                Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    AutoDismissSnackbarHost(hostState = snackbar)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bg = if (selected) CncIconTintBg else CncSurface
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = CncPrimary, modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(
+            text = label,
+            color = CncOnSurface,
+            fontSize = 16.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+
+private fun LayoutMode.next(): LayoutMode = when (this) {
+    LayoutMode.List -> LayoutMode.GridLarge
+    LayoutMode.GridLarge -> LayoutMode.GridCompact
+    LayoutMode.GridCompact -> LayoutMode.List
+}
+
+@Composable
+private fun LayoutToggleButton(
+    mode: LayoutMode,
+    onClick: () -> Unit,
+) {
+    val icon = when (mode) {
+        LayoutMode.List -> Icons.AutoMirrored.Filled.ViewList
+        LayoutMode.GridLarge -> Icons.Default.GridView
+        LayoutMode.GridCompact -> Icons.Default.ViewComfy
+    }
+    val label = when (mode) {
+        LayoutMode.List -> "Список"
+        LayoutMode.GridLarge -> "Крупная плитка"
+        LayoutMode.GridCompact -> "Компактная плитка"
+    }
+    IconButton(onClick = onClick) {
+        Icon(icon, contentDescription = label, tint = CncPrimary)
+    }
+}

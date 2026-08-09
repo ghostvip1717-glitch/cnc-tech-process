@@ -32,3 +32,19 @@
 - 2026-07-24: deploy-frontend push race fix — pull --rebase retry x3; re-deploy UX static to root/Pages
 - 2026-07-24: fix dark-theme text on light cards — #16181c for hub/parts/catalog/TP/assembly titles
 - 2026-07-24: Drive photos — thumbnail URL + blocking share + backfillDrivePhotoPermissions one-off
+
+- 2026-07-31: Android offline APK — `android/` (Kotlin+Compose+Room), package `com.cnctech.process`, minSdk 26; локальные фото+backup ZIP; APK `android/app/build/outputs/apk/debug/app-debug.apk`
+
+- 2026-07-31: Android nav — ModalNavigationDrawer (Детали/Инструмент/Настройки), старт на списке деталей; PartEntity +machiningTimeMinutes/programCount + бейджи в списке; Hub убран
+
+- 2026-07-31: Android 8 тем (LocalCncColors/ThemePrefs) + SettingsScreen; MigrationImporter + tools/export_from_sheets.py; dist/migration.zip (3 parts/17 catalog/1 TP)
+- 2026-07-31: FullscreenPhotoViewer — pinch-zoom+pager; Screen.Part/CatalogPhotoViewer; tap preview in galleries; edge-to-edge без AppHeader
+- 2026-07-31: Catalog stockQty/minStock + catalog_compatibility (plate↔tool); DB v3; badges in CatalogScreen
+- 2026-07-31: Camera capture via TakePicture+FileProvider; Part/Catalog gallery «Сделать фото»
+- 2026-08-09: SetupDetailScreen (read-only) + Screen.SetupEdit; PlateStockBadge shared component
+- 2026-08-09: Theme M3 surfaceContainer*/outline roles for dark dropdown menus
+- 2026-08-09: DB v4 notes+setup/op photos; PhotoStrip replaces galleries; CatalogItemDetail; smart plate filter + inline create
+- 2026-08-09: PhotoStrip/ReorderableColumn → LazyRow/LazyColumn; Setup screens single LazyColumn (no nested scroll)
+- 2026-08-09: PhotoStorage copyFromUri downscale 1600+EXIF+JPEG85; pointerInput keys; viewer 1-finger swipe; Catalog(activeType) persist tab
+- 2026-08-09: LayoutPrefs List/GridLarge/GridCompact; toggle in AppHeader for Parts+Catalog only
+- 2026-08-09: after create → push detail (CatalogItemDetail/Part/SetupEdit); back pops to list; CatalogDropdown untouched
