@@ -91,6 +91,7 @@ fun CatalogScreen(
     layoutMode: LayoutMode,
     onActiveTypeChange: (CatalogType) -> Unit,
     onOpenItem: (Long) -> Unit,
+    onCreated: (Long) -> Unit,
     onError: (String) -> Unit,
 ) {
     val repo = CncApp.instance.catalogRepository
@@ -374,6 +375,7 @@ fun CatalogScreen(
                         }
                         val stockPair = (plateStock as? AppResult.Ok)?.value
 
+                        var createdId: Long? = null
                         val result = if (sheetMode == "edit" && editing != null) {
                             when (val r = repo.update(editing!!.id, name, note)) {
                                 is AppResult.Err -> r
@@ -393,6 +395,7 @@ fun CatalogScreen(
                             when (val r = repo.create(activeType, name, note)) {
                                 is AppResult.Err -> r
                                 is AppResult.Ok -> {
+                                    createdId = r.value
                                     if (stockPair != null) {
                                         repo.updateStock(r.value, stockPair.first, stockPair.second)
                                     } else {
@@ -402,7 +405,10 @@ fun CatalogScreen(
                             }
                         }
                         when (result) {
-                            is AppResult.Ok -> sheetMode = null
+                            is AppResult.Ok -> {
+                                sheetMode = null
+                                createdId?.let(onCreated)
+                            }
                             is AppResult.Err -> onError(result.message)
                         }
                         busy = false

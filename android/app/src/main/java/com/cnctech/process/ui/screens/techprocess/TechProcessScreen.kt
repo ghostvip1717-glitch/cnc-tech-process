@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 fun TechProcessScreen(
     partId: Long,
     onOpenSetup: (Long) -> Unit,
+    onCreated: (Long) -> Unit,
     onError: (String) -> Unit,
 ) {
     val tpRepo = CncApp.instance.techProcessRepository
@@ -134,7 +135,10 @@ fun TechProcessScreen(
                 scope.launch {
                     busy = true
                     when (val r = tpRepo.addSetup(partId, jawId)) {
-                        is AppResult.Ok -> sheetOpen = false
+                        is AppResult.Ok -> {
+                            sheetOpen = false
+                            onCreated(r.value)
+                        }
                         is AppResult.Err -> onError(r.message)
                     }
                     busy = false

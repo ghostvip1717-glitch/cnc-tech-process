@@ -71,6 +71,7 @@ import java.io.File
 fun PartsListScreen(
     layoutMode: LayoutMode,
     onOpenPart: (Long) -> Unit,
+    onCreated: (Long) -> Unit,
     onError: (String) -> Unit,
 ) {
     val repo = CncApp.instance.partRepository
@@ -168,7 +169,10 @@ fun PartsListScreen(
                 scope.launch {
                     busy = true
                     when (val r = repo.create(number, title)) {
-                        is AppResult.Ok -> sheetOpen = false
+                        is AppResult.Ok -> {
+                            sheetOpen = false
+                            onCreated(r.value)
+                        }
                         is AppResult.Err -> onError(r.message)
                     }
                     busy = false

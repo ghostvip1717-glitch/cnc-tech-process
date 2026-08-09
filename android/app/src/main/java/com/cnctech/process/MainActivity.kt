@@ -276,6 +276,7 @@ private fun CncAppRoot() {
                             Screen.Parts -> PartsListScreen(
                                 layoutMode = partsLayout,
                                 onOpenPart = { push(Screen.Part(it)) },
+                                onCreated = { id -> push(Screen.Part(id)) },
                                 onError = ::showError,
                             )
                             is Screen.Part -> PartDetailScreen(
@@ -300,6 +301,7 @@ private fun CncAppRoot() {
                             is Screen.TechProcess -> TechProcessScreen(
                                 partId = r.partId,
                                 onOpenSetup = { setupId -> push(Screen.Setup(r.partId, setupId)) },
+                                onCreated = { setupId -> push(Screen.SetupEdit(r.partId, setupId)) },
                                 onError = ::showError,
                             )
                             is Screen.Setup -> SetupDetailScreen(
@@ -348,6 +350,7 @@ private fun CncAppRoot() {
                                     }
                                 },
                                 onOpenItem = { id -> push(Screen.CatalogItemDetail(id)) },
+                                onCreated = { id -> push(Screen.CatalogItemDetail(id)) },
                                 onError = ::showError,
                             )
                             is Screen.CatalogItemDetail -> CatalogItemDetailScreen(

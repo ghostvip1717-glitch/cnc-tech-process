@@ -47,3 +47,4 @@
 - 2026-08-09: PhotoStrip/ReorderableColumn → LazyRow/LazyColumn; Setup screens single LazyColumn (no nested scroll)
 - 2026-08-09: PhotoStorage copyFromUri downscale 1600+EXIF+JPEG85; pointerInput keys; viewer 1-finger swipe; Catalog(activeType) persist tab
 - 2026-08-09: LayoutPrefs List/GridLarge/GridCompact; toggle in AppHeader for Parts+Catalog only
+- 2026-08-09: after create → push detail (CatalogItemDetail/Part/SetupEdit); back pops to list; CatalogDropdown untouched
