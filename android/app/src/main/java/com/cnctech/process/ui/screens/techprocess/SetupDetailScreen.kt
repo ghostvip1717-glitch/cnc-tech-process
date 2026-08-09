@@ -14,9 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,135 +87,142 @@ fun SetupDetailScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-    ) {
-        if (detail == null) {
+    if (detail == null) {
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             SkeletonStack()
-            return@Column
         }
+        return
+    }
 
-        Text(
-            "Установ ${detail!!.label}",
-            color = CncOnSurface,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+    val ops = detail!!.operations
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+    ) {
+        item(key = "header") {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Установ ${detail!!.label}",
+                    color = CncOnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
-        val jaw = itemsById[detail!!.setup.jawId]
-        Text(
-            "Кулачки",
-            color = CncOnSurfaceSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        CatalogEntityCard(
-            name = jaw?.name ?: detail!!.jawName,
-            note = jaw?.note,
-            coverPath = coverById[detail!!.setup.jawId],
-            onOpenCover = { onOpenCatalogPhoto(detail!!.setup.jawId, 0) },
-        )
+                val jaw = itemsById[detail!!.setup.jawId]
+                Text(
+                    "Кулачки",
+                    color = CncOnSurfaceSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                CatalogEntityCard(
+                    name = jaw?.name ?: detail!!.jawName,
+                    note = jaw?.note,
+                    coverPath = coverById[detail!!.setup.jawId],
+                    onOpenCover = { onOpenCatalogPhoto(detail!!.setup.jawId, 0) },
+                )
 
-        detail!!.setup.note?.takeIf { it.isNotBlank() }?.let { note ->
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(note, color = CncOnSurfaceSecondary, fontSize = 14.sp)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Фото установа", color = CncOnSurfaceSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.height(8.dp))
-        PhotoStrip(
-            photos = detail!!.photos.map { PhotoStripItem(it.id, it.filePath) },
-            onAdd = { uri ->
-                scope.launch {
-                    when (val result = tpRepo.addSetupPhoto(setupId, uri)) {
-                        is AppResult.Ok -> Unit
-                        is AppResult.Err -> onError(result.message)
-                    }
+                detail!!.setup.note?.takeIf { it.isNotBlank() }?.let { note ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(note, color = CncOnSurfaceSecondary, fontSize = 14.sp)
                 }
-            },
-            onDelete = { id ->
-                scope.launch {
-                    when (val result = tpRepo.deleteSetupPhoto(id)) {
-                        is AppResult.Ok -> Unit
-                        is AppResult.Err -> onError(result.message)
-                    }
-                }
-            },
-            onReorder = { ids ->
-                scope.launch {
-                    when (val result = tpRepo.reorderSetupPhotos(setupId, ids)) {
-                        is AppResult.Ok -> Unit
-                        is AppResult.Err -> onError(result.message)
-                    }
-                }
-            },
-            onOpenViewer = onOpenSetupPhoto,
-        )
 
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            "Операции",
-            color = CncOnSurfaceSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Фото установа", color = CncOnSurfaceSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Spacer(modifier = Modifier.height(8.dp))
+                PhotoStrip(
+                    photos = detail!!.photos.map { PhotoStripItem(it.id, it.filePath) },
+                    onAdd = { uri ->
+                        scope.launch {
+                            when (val result = tpRepo.addSetupPhoto(setupId, uri)) {
+                                is AppResult.Ok -> Unit
+                                is AppResult.Err -> onError(result.message)
+                            }
+                        }
+                    },
+                    onDelete = { id ->
+                        scope.launch {
+                            when (val result = tpRepo.deleteSetupPhoto(id)) {
+                                is AppResult.Ok -> Unit
+                                is AppResult.Err -> onError(result.message)
+                            }
+                        }
+                    },
+                    onReorder = { ids ->
+                        scope.launch {
+                            when (val result = tpRepo.reorderSetupPhotos(setupId, ids)) {
+                                is AppResult.Ok -> Unit
+                                is AppResult.Err -> onError(result.message)
+                            }
+                        }
+                    },
+                    onOpenViewer = onOpenSetupPhoto,
+                )
 
-        val ops = detail!!.operations
-        if (ops.isEmpty()) {
-            EmptyText("Нет операций")
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ops.forEach { op ->
-                    OperationCard(
-                        operation = op,
-                        tool = itemsById[op.toolId],
-                        plate = itemsById[op.plateId],
-                        toolCover = coverById[op.toolId],
-                        plateCover = coverById[op.plateId],
-                        photos = detail!!.operationPhotos[op.id].orEmpty().map {
-                            PhotoStripItem(it.id, it.filePath)
-                        },
-                        onOpenCatalogPhoto = onOpenCatalogPhoto,
-                        onOpenOperationPhoto = { index -> onOpenOperationPhoto(op.id, index) },
-                        onPhotoAdd = { uri ->
-                            scope.launch {
-                                when (val result = tpRepo.addOperationPhoto(op.id, uri)) {
-                                    is AppResult.Ok -> Unit
-                                    is AppResult.Err -> onError(result.message)
-                                }
-                            }
-                        },
-                        onPhotoDelete = { id ->
-                            scope.launch {
-                                when (val result = tpRepo.deleteOperationPhoto(id)) {
-                                    is AppResult.Ok -> Unit
-                                    is AppResult.Err -> onError(result.message)
-                                }
-                            }
-                        },
-                        onPhotoReorder = { ids ->
-                            scope.launch {
-                                when (val result = tpRepo.reorderOperationPhotos(op.id, ids)) {
-                                    is AppResult.Ok -> Unit
-                                    is AppResult.Err -> onError(result.message)
-                                }
-                            }
-                        },
-                    )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    "Операции",
+                    color = CncOnSurfaceSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (ops.isEmpty()) {
+                    EmptyText("Нет операций")
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        PrimaryButton(text = "Изменить", onClick = onEdit)
-        Spacer(modifier = Modifier.height(8.dp))
+        items(ops, key = { it.id }) { op ->
+            Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                OperationCard(
+                    operation = op,
+                    tool = itemsById[op.toolId],
+                    plate = itemsById[op.plateId],
+                    toolCover = coverById[op.toolId],
+                    plateCover = coverById[op.plateId],
+                    photos = detail!!.operationPhotos[op.id].orEmpty().map {
+                        PhotoStripItem(it.id, it.filePath)
+                    },
+                    onOpenCatalogPhoto = onOpenCatalogPhoto,
+                    onOpenOperationPhoto = { index -> onOpenOperationPhoto(op.id, index) },
+                    onPhotoAdd = { uri ->
+                        scope.launch {
+                            when (val result = tpRepo.addOperationPhoto(op.id, uri)) {
+                                is AppResult.Ok -> Unit
+                                is AppResult.Err -> onError(result.message)
+                            }
+                        }
+                    },
+                    onPhotoDelete = { id ->
+                        scope.launch {
+                            when (val result = tpRepo.deleteOperationPhoto(id)) {
+                                is AppResult.Ok -> Unit
+                                is AppResult.Err -> onError(result.message)
+                            }
+                        }
+                    },
+                    onPhotoReorder = { ids ->
+                        scope.launch {
+                            when (val result = tpRepo.reorderOperationPhotos(op.id, ids)) {
+                                is AppResult.Ok -> Unit
+                                is AppResult.Err -> onError(result.message)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
+        item(key = "footer") {
+            Column {
+                Spacer(modifier = Modifier.height(14.dp))
+                PrimaryButton(text = "Изменить", onClick = onEdit)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
     }
 }
 

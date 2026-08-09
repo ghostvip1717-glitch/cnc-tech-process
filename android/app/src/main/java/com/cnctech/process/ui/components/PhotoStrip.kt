@@ -8,11 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +18,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,9 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -58,6 +55,8 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private const val AddTileKey = "add_tile"
+
 data class PhotoStripItem(val id: Long, val filePath: String)
 
 @Composable
@@ -70,12 +69,12 @@ fun PhotoStrip(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val photoStorage = CncApp.instance.photoStorage
     val hasCamera = remember {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
     }
+    val listState = rememberLazyListState()
 
     var chooserOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PhotoStripItem?>(null) }
@@ -85,7 +84,6 @@ fun PhotoStrip(
     val byId = remember(photos) { photos.associateBy { it.id } }
     var draggingId by remember { mutableStateOf<Long?>(null) }
     var dragOffsetX by remember { mutableFloatStateOf(0f) }
-    var itemWidthPx by remember { mutableIntStateOf(0) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let(onAdd)
@@ -105,15 +103,14 @@ fun PhotoStrip(
         }
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+    LazyRow(
+        state = listState,
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        order.forEach { id ->
-            val photo = byId[id] ?: return@forEach
+        items(order, key = { it }) { id ->
+            val photo = byId[id] ?: return@items
             val index = photos.indexOfFirst { it.id == id }
             val isDragging = draggingId == id
             Column(
@@ -122,9 +119,6 @@ fun PhotoStrip(
                     .zIndex(if (isDragging) 1f else 0f)
                     .offset {
                         IntOffset(if (isDragging) dragOffsetX.roundToInt() else 0, 0)
-                    }
-                    .onGloballyPositioned { coords ->
-                        if (itemWidthPx == 0) itemWidthPx = coords.size.width
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -151,7 +145,7 @@ fun PhotoStrip(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(28.dp)
-                        .pointerInput(id, order, itemWidthPx) {
+                        .pointerInput(id, order, listState) {
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
                                     draggingId = id
@@ -170,19 +164,27 @@ fun PhotoStrip(
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     dragOffsetX += dragAmount.x
-                                    val width = (
-                                        if (itemWidthPx > 0) itemWidthPx.toFloat() else with(density) { 72.dp.toPx() }
-                                        ) + with(density) { 10.dp.toPx() }
+                                    val draggedInfo = listState.layoutInfo.visibleItemsInfo
+                                        .firstOrNull { it.key == id }
+                                        ?: return@detectDragGesturesAfterLongPress
+                                    val fingerX = draggedInfo.offset + draggedInfo.size / 2f + dragOffsetX
+                                    val target = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                                        val key = info.key
+                                        key != id &&
+                                            key != AddTileKey &&
+                                            key is Long &&
+                                            fingerX >= info.offset &&
+                                            fingerX < info.offset + info.size
+                                    } ?: return@detectDragGesturesAfterLongPress
+                                    val toKey = target.key as Long
                                     val from = order.indexOf(id)
-                                    if (from < 0) return@detectDragGesturesAfterLongPress
-                                    val shift = (dragOffsetX / width).roundToInt()
-                                    val to = (from + shift).coerceIn(0, order.lastIndex)
-                                    if (to != from) {
+                                    val to = order.indexOf(toKey)
+                                    if (from >= 0 && to >= 0 && from != to) {
                                         val next = order.toMutableList()
                                         next.removeAt(from)
                                         next.add(to, id)
                                         order = next
-                                        dragOffsetX -= (to - from) * width
+                                        dragOffsetX = 0f
                                     }
                                 },
                             )
@@ -194,20 +196,22 @@ fun PhotoStrip(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, CncBorder, RoundedCornerShape(8.dp))
-                .background(CncSurface)
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { chooserOpen = true })
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить фото", tint = CncPrimary)
-                Text("+", color = CncMuted)
+        item(key = AddTileKey) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, CncBorder, RoundedCornerShape(8.dp))
+                    .background(CncSurface)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { chooserOpen = true })
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Add, contentDescription = "Добавить фото", tint = CncPrimary)
+                    Text("+", color = CncMuted)
+                }
             }
         }
     }
