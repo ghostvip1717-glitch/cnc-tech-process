@@ -279,7 +279,7 @@ fun SetupScreen(
                                     Box(
                                         modifier = Modifier
                                             .padding(end = 4.dp)
-                                            .pointerInput(opId, opOrder, listState) {
+                                            .pointerInput(opId) {
                                                 detectDragGesturesAfterLongPress(
                                                     onDragStart = {
                                                         draggingOpId = opId

@@ -1,5 +1,7 @@
 package com.cnctech.process.ui.navigation
 
+import com.cnctech.process.data.entity.CatalogType
+
 sealed class Screen {
     data object Parts : Screen()
     data class Part(val partId: Long) : Screen()
@@ -11,7 +13,7 @@ sealed class Screen {
     data class SetupPhotoViewer(val setupId: Long, val startIndex: Int) : Screen()
     data class OperationPhotoViewer(val operationId: Long, val startIndex: Int) : Screen()
     data class Assembly(val partId: Long) : Screen()
-    data object Catalog : Screen()
+    data class Catalog(val activeType: CatalogType = CatalogType.tool) : Screen()
     data class CatalogItemDetail(val catalogItemId: Long) : Screen()
     data class CatalogPhotoViewer(val catalogItemId: Long, val startIndex: Int) : Screen()
     data object Settings : Screen()
@@ -25,7 +27,7 @@ enum class RootSection {
 }
 
 fun Screen.isRoot(): Boolean = when (this) {
-    Screen.Parts, Screen.Catalog, Screen.Settings -> true
+    Screen.Parts, is Screen.Catalog, Screen.Settings -> true
     else -> false
 }
 
@@ -40,7 +42,7 @@ fun Screen.rootSection(): RootSection = when (this) {
     is Screen.PartPhotoViewer, is Screen.TechProcess, is Screen.Setup, is Screen.SetupEdit,
     is Screen.SetupPhotoViewer, is Screen.OperationPhotoViewer,
     is Screen.Assembly -> RootSection.Parts
-    Screen.Catalog, is Screen.CatalogItemDetail, is Screen.CatalogPhotoViewer -> RootSection.Catalog
+    is Screen.Catalog, is Screen.CatalogItemDetail, is Screen.CatalogPhotoViewer -> RootSection.Catalog
     Screen.Settings -> RootSection.Settings
 }
 
@@ -55,7 +57,11 @@ fun Screen.title(): String = when (this) {
     is Screen.SetupPhotoViewer -> ""
     is Screen.OperationPhotoViewer -> ""
     is Screen.Assembly -> "Сборка"
-    Screen.Catalog -> "Инструмент"
+    is Screen.Catalog -> when (activeType) {
+        CatalogType.tool -> "Инструмент"
+        CatalogType.plate -> "Пластины"
+        CatalogType.jaw -> "Кулачки"
+    }
     is Screen.CatalogItemDetail -> "Справочник"
     is Screen.CatalogPhotoViewer -> ""
     Screen.Settings -> "Настройки"
@@ -63,6 +69,6 @@ fun Screen.title(): String = when (this) {
 
 fun RootSection.toScreen(): Screen = when (this) {
     RootSection.Parts -> Screen.Parts
-    RootSection.Catalog -> Screen.Catalog
+    RootSection.Catalog -> Screen.Catalog()
     RootSection.Settings -> Screen.Settings
 }

@@ -65,7 +65,7 @@ fun <T> ReorderableColumn(
                         Box(
                             modifier = Modifier
                                 .padding(end = 4.dp)
-                                .pointerInput(id, order, listState) {
+                                .pointerInput(id) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = {
                                             draggingId = id

@@ -80,6 +80,8 @@ private data class Tab(val type: CatalogType, val label: String)
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun CatalogScreen(
+    activeType: CatalogType,
+    onActiveTypeChange: (CatalogType) -> Unit,
     onOpenItem: (Long) -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -90,9 +92,8 @@ fun CatalogScreen(
         Tab(CatalogType.plate, "Пластины"),
         Tab(CatalogType.jaw, "Кулачки"),
     )
-    var activeType by remember { mutableStateOf(CatalogType.tool) }
     var search by remember { mutableStateOf("") }
-    val typeFlow = remember { MutableStateFlow(CatalogType.tool) }
+    val typeFlow = remember { MutableStateFlow(activeType) }
     val queryFlow = remember { MutableStateFlow("") }
 
     LaunchedEffect(activeType) { typeFlow.value = activeType }
@@ -153,7 +154,7 @@ fun CatalogScreen(
                             .border(1.dp, if (selected) CncPrimary else CncBorder, RoundedCornerShape(10.dp))
                             .background(if (selected) CncPrimary.copy(alpha = 0.1f) else CncSurface)
                             .clickable {
-                                activeType = tab.type
+                                onActiveTypeChange(tab.type)
                                 sheetMode = null
                             }
                             .padding(vertical = 10.dp),

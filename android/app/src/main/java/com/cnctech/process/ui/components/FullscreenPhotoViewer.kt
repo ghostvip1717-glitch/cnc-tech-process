@@ -2,8 +2,11 @@ package com.cnctech.process.ui.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,7 +128,7 @@ private fun CloseButton(
 ) {
     IconButton(
         onClick = onClose,
-        modifier = modifier
+        modifier = Modifier
             .background(Color.Black.copy(alpha = 0.45f), CircleShape)
             .size(40.dp),
     ) {
@@ -159,11 +163,25 @@ private fun ZoomableImage(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val next = (scale * zoom).coerceIn(1f, 5f)
-                    scale = next
-                    offset = if (next <= 1f) Offset.Zero else offset + pan
-                    onScaleChange(next)
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val pressedCount = event.changes.count { it.pressed }
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
+                        val shouldHandle = pressedCount >= 2 || scale > 1.01f
+                        if (shouldHandle && (zoom != 1f || pan != Offset.Zero)) {
+                            val next = (scale * zoom).coerceIn(1f, 5f)
+                            scale = next
+                            offset = if (next <= 1f) Offset.Zero else offset + pan
+                            onScaleChange(next)
+                            event.changes.forEach { change ->
+                                if (change.positionChanged()) change.consume()
+                            }
+                        }
+                        // 1 finger at ~1x: do not consume — HorizontalPager gets the swipe.
+                    } while (event.changes.any { it.pressed })
                 }
             }
             .pointerInput(Unit) {

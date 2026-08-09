@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,6 +113,7 @@ fun PhotoStrip(
         items(order, key = { it }) { id ->
             val photo = byId[id] ?: return@items
             val index = photos.indexOfFirst { it.id == id }
+            val currentIndex by rememberUpdatedState(index)
             val isDragging = draggingId == id
             Column(
                 modifier = Modifier
@@ -130,10 +132,10 @@ fun PhotoStrip(
                         .size(72.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(CncSkeleton)
-                        .pointerInput(photo.id, index) {
+                        .pointerInput(photo.id) {
                             detectTapGestures(
                                 onTap = {
-                                    if (index >= 0) onOpenViewer(index)
+                                    if (currentIndex >= 0) onOpenViewer(currentIndex)
                                 },
                                 onLongPress = {
                                     pendingDelete = photo
@@ -145,7 +147,7 @@ fun PhotoStrip(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(28.dp)
-                        .pointerInput(id, order, listState) {
+                        .pointerInput(id) {
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
                                     draggingId = id

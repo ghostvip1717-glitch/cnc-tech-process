@@ -295,7 +295,13 @@ private fun CncAppRoot() {
                                 partId = r.partId,
                                 onError = ::showError,
                             )
-                            Screen.Catalog -> CatalogScreen(
+                            is Screen.Catalog -> CatalogScreen(
+                                activeType = r.activeType,
+                                onActiveTypeChange = { type ->
+                                    if (stack.isNotEmpty() && stack.last() is Screen.Catalog) {
+                                        stack[stack.lastIndex] = Screen.Catalog(type)
+                                    }
+                                },
                                 onOpenItem = { id -> push(Screen.CatalogItemDetail(id)) },
                                 onError = ::showError,
                             )
