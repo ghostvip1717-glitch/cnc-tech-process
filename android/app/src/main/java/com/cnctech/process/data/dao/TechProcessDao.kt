@@ -5,7 +5,9 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.cnctech.process.data.entity.OperationEntity
+import com.cnctech.process.data.entity.OperationPhotoEntity
 import com.cnctech.process.data.entity.SetupEntity
+import com.cnctech.process.data.entity.SetupPhotoEntity
 import com.cnctech.process.data.entity.TechProcessEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -79,6 +81,92 @@ interface TechProcessDao {
         """,
     )
     suspend fun getOperationsForTechProcess(techProcessId: Long): List<OperationEntity>
+
+    // --- setup photos ---
+
+    @Query(
+        """
+        SELECT * FROM setup_photos
+        WHERE setupId = :setupId
+        ORDER BY sortOrder ASC, id ASC
+        """,
+    )
+    fun observeSetupPhotos(setupId: Long): Flow<List<SetupPhotoEntity>>
+
+    @Query(
+        """
+        SELECT * FROM setup_photos
+        WHERE setupId = :setupId
+        ORDER BY sortOrder ASC, id ASC
+        """,
+    )
+    suspend fun getSetupPhotos(setupId: Long): List<SetupPhotoEntity>
+
+    @Query("SELECT * FROM setup_photos WHERE id = :id")
+    suspend fun getSetupPhoto(id: Long): SetupPhotoEntity?
+
+    @Insert
+    suspend fun insertSetupPhoto(photo: SetupPhotoEntity): Long
+
+    @Update
+    suspend fun updateSetupPhoto(photo: SetupPhotoEntity)
+
+    @Query("DELETE FROM setup_photos WHERE id = :id")
+    suspend fun deleteSetupPhoto(id: Long)
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM setup_photos WHERE setupId = :setupId")
+    suspend fun maxSetupPhotoSortOrder(setupId: Long): Int
+
+    @Query("DELETE FROM setup_photos")
+    suspend fun clearAllSetupPhotos()
+
+    // --- operation photos ---
+
+    @Query(
+        """
+        SELECT * FROM operation_photos
+        WHERE operationId = :operationId
+        ORDER BY sortOrder ASC, id ASC
+        """,
+    )
+    fun observeOperationPhotos(operationId: Long): Flow<List<OperationPhotoEntity>>
+
+    @Query(
+        """
+        SELECT p.* FROM operation_photos p
+        INNER JOIN operations o ON o.id = p.operationId
+        WHERE o.setupId = :setupId
+        ORDER BY p.operationId ASC, p.sortOrder ASC, p.id ASC
+        """,
+    )
+    fun observeOperationPhotosForSetup(setupId: Long): Flow<List<OperationPhotoEntity>>
+
+    @Query(
+        """
+        SELECT * FROM operation_photos
+        WHERE operationId = :operationId
+        ORDER BY sortOrder ASC, id ASC
+        """,
+    )
+    suspend fun getOperationPhotos(operationId: Long): List<OperationPhotoEntity>
+
+    @Query("SELECT * FROM operation_photos WHERE id = :id")
+    suspend fun getOperationPhoto(id: Long): OperationPhotoEntity?
+
+    @Insert
+    suspend fun insertOperationPhoto(photo: OperationPhotoEntity): Long
+
+    @Update
+    suspend fun updateOperationPhoto(photo: OperationPhotoEntity)
+
+    @Query("DELETE FROM operation_photos WHERE id = :id")
+    suspend fun deleteOperationPhoto(id: Long)
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM operation_photos WHERE operationId = :operationId")
+    suspend fun maxOperationPhotoSortOrder(operationId: Long): Int
+
+    @Query("DELETE FROM operation_photos")
+    suspend fun clearAllOperationPhotos()
 
     @Query("DELETE FROM operations")
     suspend fun clearAllOperations()

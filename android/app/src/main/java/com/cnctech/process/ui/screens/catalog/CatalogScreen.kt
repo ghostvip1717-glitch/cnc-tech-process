@@ -80,7 +80,7 @@ private data class Tab(val type: CatalogType, val label: String)
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun CatalogScreen(
-    onOpenGallery: (Long, String) -> Unit,
+    onOpenItem: (Long) -> Unit,
     onError: (String) -> Unit,
 ) {
     val repo = CncApp.instance.catalogRepository
@@ -202,7 +202,7 @@ fun CatalogScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
                                 .background(CncSurface)
-                                .clickable { onOpenGallery(row.item.id, row.item.name) }
+                                .clickable { onOpenItem(row.item.id) }
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

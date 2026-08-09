@@ -13,11 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,19 +32,18 @@ import com.cnctech.process.CncApp
 import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogType
 import com.cnctech.process.data.repository.AppResult
+import com.cnctech.process.ui.components.CatalogDropdown
 import com.cnctech.process.ui.components.CncBottomSheet
 import com.cnctech.process.ui.components.CncFab
 import com.cnctech.process.ui.components.EmptyText
 import com.cnctech.process.ui.components.PrimaryButton
 import com.cnctech.process.ui.components.SkeletonStack
-import com.cnctech.process.ui.components.fieldColors
 import com.cnctech.process.ui.theme.CncBorder
 import com.cnctech.process.ui.theme.CncOnSurface
 import com.cnctech.process.ui.theme.CncOnSurfaceSecondary
 import com.cnctech.process.ui.theme.CncSurface
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TechProcessScreen(
     partId: Long,
@@ -74,7 +68,6 @@ fun TechProcessScreen(
 
     var sheetOpen by remember { mutableStateOf(false) }
     var selectedJawId by remember { mutableStateOf<Long?>(null) }
-    var jawExpanded by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -123,50 +116,30 @@ fun TechProcessScreen(
     }
 
     CncBottomSheet(open = sheetOpen, title = "Новый установ", onDismiss = { if (!busy) sheetOpen = false }) {
-        if (jaws.isEmpty()) {
-            EmptyText("Сначала добавьте кулачки в справочник")
-        } else {
-            val selected = jaws.find { it.id == selectedJawId }
-            ExposedDropdownMenuBox(expanded = jawExpanded, onExpandedChange = { jawExpanded = it }) {
-                OutlinedTextField(
-                    value = selected?.name.orEmpty(),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Кулачки") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = jawExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    colors = fieldColors(),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                ExposedDropdownMenu(expanded = jawExpanded, onDismissRequest = { jawExpanded = false }) {
-                    jaws.forEach { jaw ->
-                        DropdownMenuItem(
-                            text = { Text(jaw.name, color = CncOnSurface) },
-                            onClick = {
-                                selectedJawId = jaw.id
-                                jawExpanded = false
-                            },
-                        )
+        CatalogDropdown(
+            label = "Кулачки",
+            type = CatalogType.jaw,
+            items = jaws,
+            selectedId = selectedJawId,
+            onSelect = { selectedJawId = it },
+            onError = onError,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        PrimaryButton(
+            text = "Создать",
+            busy = busy,
+            enabled = selectedJawId != null,
+            onClick = {
+                val jawId = selectedJawId ?: return@PrimaryButton
+                scope.launch {
+                    busy = true
+                    when (val r = tpRepo.addSetup(partId, jawId)) {
+                        is AppResult.Ok -> sheetOpen = false
+                        is AppResult.Err -> onError(r.message)
                     }
+                    busy = false
                 }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            PrimaryButton(
-                text = "Создать",
-                busy = busy,
-                enabled = selectedJawId != null,
-                onClick = {
-                    val jawId = selectedJawId ?: return@PrimaryButton
-                    scope.launch {
-                        busy = true
-                        when (val r = tpRepo.addSetup(partId, jawId)) {
-                            is AppResult.Ok -> sheetOpen = false
-                            is AppResult.Err -> onError(r.message)
-                        }
-                        busy = false
-                    }
-                },
-            )
-        }
+            },
+        )
     }
 }

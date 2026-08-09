@@ -50,7 +50,7 @@ class CncApp : Application() {
         photoStorage = PhotoStorage(this)
         partRepository = PartRepository(database, photoStorage)
         catalogRepository = CatalogRepository(database, photoStorage)
-        techProcessRepository = TechProcessRepository(database, catalogRepository)
+        techProcessRepository = TechProcessRepository(database, catalogRepository, photoStorage)
         backupManager = BackupManager(this, photoStorage)
         migrationImporter = MigrationImporter(this, database, photoStorage)
     }

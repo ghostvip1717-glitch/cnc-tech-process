@@ -67,6 +67,7 @@ class PartRepository(
         title: String,
         machiningTimeMinutes: Int?,
         programCount: Int?,
+        note: String? = null,
     ): AppResult<Unit> {
         val existing = partDao.getPart(partId) ?: return AppResult.Err("Деталь не найдена")
         val n = number.trim()
@@ -79,6 +80,10 @@ class PartRepository(
         if (programCount != null && programCount < 0) {
             return AppResult.Err("Количество программ не может быть отрицательным")
         }
+        val noteTrimmed = note?.trim()?.takeIf { it.isNotEmpty() }
+        if (noteTrimmed != null && noteTrimmed.length > 1000) {
+            return AppResult.Err("Заметка: максимум 1000 символов")
+        }
         return try {
             partDao.update(
                 existing.copy(
@@ -86,6 +91,7 @@ class PartRepository(
                     title = t,
                     machiningTimeMinutes = machiningTimeMinutes,
                     programCount = programCount,
+                    note = noteTrimmed,
                 ),
             )
             AppResult.Ok(Unit)
@@ -102,8 +108,15 @@ class PartRepository(
             if (tp != null) {
                 val setups = tpDao.getSetups(tp.id)
                 for (setup in setups) {
+                    val ops = tpDao.getOperations(setup.id)
+                    val opPhotoFiles = ops.flatMap { tpDao.getOperationPhotos(it.id) }.map { it.filePath }
+                    val setupPhotoFiles = tpDao.getSetupPhotos(setup.id).map { it.filePath }
                     tpDao.deleteOperationsForSetup(setup.id)
                     tpDao.deleteSetup(setup.id)
+                    opPhotoFiles.forEach { photos.deleteFile(it) }
+                    setupPhotoFiles.forEach { photos.deleteFile(it) }
+                    ops.forEach { photos.deleteDir(photos.operationDir(it.id)) }
+                    photos.deleteDir(photos.setupDir(setup.id))
                 }
                 tpDao.delete(tp.id)
             }

@@ -41,6 +41,7 @@ fun PartEditScreen(
     var title by remember { mutableStateOf("") }
     var machiningTime by remember { mutableStateOf("") }
     var programCount by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
     var initialized by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -52,6 +53,7 @@ fun PartEditScreen(
             title = part.title
             machiningTime = part.machiningTimeMinutes?.toString().orEmpty()
             programCount = part.programCount?.toString().orEmpty()
+            note = part.note.orEmpty()
             initialized = true
         }
     }
@@ -85,6 +87,14 @@ fun PartEditScreen(
             onValueChange = { programCount = it.filter { ch -> ch.isDigit() } },
             label = "Количество программ",
         )
+        Spacer(modifier = Modifier.height(12.dp))
+        CncTextField(
+            value = note,
+            onValueChange = { note = it },
+            label = "Заметка",
+            singleLine = false,
+            minLines = 3,
+        )
         Spacer(modifier = Modifier.height(16.dp))
         PrimaryButton(
             text = "Сохранить",
@@ -99,6 +109,7 @@ fun PartEditScreen(
                             title = title,
                             machiningTimeMinutes = machiningTime.trim().toIntOrNull(),
                             programCount = programCount.trim().toIntOrNull(),
+                            note = note,
                         )
                     ) {
                         is AppResult.Ok -> onSaved()

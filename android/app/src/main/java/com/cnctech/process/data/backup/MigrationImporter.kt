@@ -103,6 +103,7 @@ class MigrationImporter(
                             createdAt = part.optLong("createdAt", System.currentTimeMillis()),
                             machiningTimeMinutes = null,
                             programCount = null,
+                            note = null,
                         ),
                     )
                     photoCount += importPhotos(
@@ -136,6 +137,7 @@ class MigrationImporter(
                                 techProcessId = tpId,
                                 order = setup.getInt("order"),
                                 jawId = setup.getLong("jawId"),
+                                note = null,
                             ),
                         )
                         setupCount++
@@ -173,6 +175,8 @@ class MigrationImporter(
     }
 
     private suspend fun clearAllData() {
+        db.techProcessDao().clearAllOperationPhotos()
+        db.techProcessDao().clearAllSetupPhotos()
         db.techProcessDao().clearAllOperations()
         db.techProcessDao().clearAllSetups()
         db.techProcessDao().clearAllTechProcesses()

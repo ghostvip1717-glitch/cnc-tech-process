@@ -43,3 +43,4 @@
 - 2026-07-31: Camera capture via TakePicture+FileProvider; Part/Catalog gallery «Сделать фото»
 - 2026-08-09: SetupDetailScreen (read-only) + Screen.SetupEdit; PlateStockBadge shared component
 - 2026-08-09: Theme M3 surfaceContainer*/outline roles for dark dropdown menus
+- 2026-08-09: DB v4 notes+setup/op photos; PhotoStrip replaces galleries; CatalogItemDetail; smart plate filter + inline create

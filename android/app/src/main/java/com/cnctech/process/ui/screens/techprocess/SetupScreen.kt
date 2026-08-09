@@ -1,7 +1,9 @@
 package com.cnctech.process.ui.screens.techprocess
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,13 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,16 +38,18 @@ import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogType
 import com.cnctech.process.data.entity.OperationEntity
 import com.cnctech.process.data.repository.AppResult
+import com.cnctech.process.ui.components.CatalogDropdown
 import com.cnctech.process.ui.components.ConfirmDialog
 import com.cnctech.process.ui.components.CncBottomSheet
 import com.cnctech.process.ui.components.CncFab
 import com.cnctech.process.ui.components.CncTextField
 import com.cnctech.process.ui.components.DangerButton
 import com.cnctech.process.ui.components.EmptyText
+import com.cnctech.process.ui.components.PhotoStrip
+import com.cnctech.process.ui.components.PhotoStripItem
 import com.cnctech.process.ui.components.PrimaryButton
 import com.cnctech.process.ui.components.ReorderableColumn
 import com.cnctech.process.ui.components.SkeletonStack
-import com.cnctech.process.ui.components.fieldColors
 import com.cnctech.process.ui.theme.CncBorder
 import com.cnctech.process.ui.theme.CncDanger
 import com.cnctech.process.ui.theme.CncOnSurface
@@ -58,12 +57,14 @@ import com.cnctech.process.ui.theme.CncOnSurfaceSecondary
 import com.cnctech.process.ui.theme.CncSurface
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupScreen(
     setupId: Long,
     onDeleted: () -> Unit,
     onError: (String) -> Unit,
+    onOpenCatalogPhoto: (Long, Int) -> Unit = { _, _ -> },
+    onOpenSetupPhoto: (Int) -> Unit = {},
+    onOpenOperationPhoto: (Long, Int) -> Unit = { _, _ -> },
 ) {
     val tpRepo = CncApp.instance.techProcessRepository
     val catalogRepo = CncApp.instance.catalogRepository
@@ -73,28 +74,44 @@ fun SetupScreen(
     var jaws by remember { mutableStateOf<List<CatalogItemEntity>>(emptyList()) }
     var tools by remember { mutableStateOf<List<CatalogItemEntity>>(emptyList()) }
     var plates by remember { mutableStateOf<List<CatalogItemEntity>>(emptyList()) }
+    var coverById by remember { mutableStateOf<Map<Long, String?>>(emptyMap()) }
+
     LaunchedEffect(Unit) {
-        jaws = catalogRepo.listByType(CatalogType.jaw)
-        tools = catalogRepo.listByType(CatalogType.tool)
-        plates = catalogRepo.listByType(CatalogType.plate)
+        val loadedJaws = catalogRepo.listByType(CatalogType.jaw)
+        val loadedTools = catalogRepo.listByType(CatalogType.tool)
+        val loadedPlates = catalogRepo.listByType(CatalogType.plate)
+        jaws = loadedJaws
+        tools = loadedTools
+        plates = loadedPlates
+        val ids = (loadedJaws + loadedTools + loadedPlates).map { it.id }.distinct()
+        coverById = ids.associateWith { id ->
+            catalogRepo.getPhotos(id).firstOrNull()?.filePath
+        }
     }
 
     var busy by remember { mutableStateOf(false) }
-    var jawExpanded by remember { mutableStateOf(false) }
     var confirmSetupDelete by remember { mutableStateOf(false) }
     var pendingOpDelete by remember { mutableStateOf<OperationEntity?>(null) }
     var sheetOpen by remember { mutableStateOf(false) }
+
+    var setupNote by remember { mutableStateOf("") }
+    var setupNoteInitializedFor by remember { mutableStateOf<Long?>(null) }
 
     var opNumber by remember { mutableStateOf("") }
     var opTitle by remember { mutableStateOf("") }
     var toolId by remember { mutableStateOf<Long?>(null) }
     var plateId by remember { mutableStateOf<Long?>(null) }
     var comment by remember { mutableStateOf("") }
-    var toolExpanded by remember { mutableStateOf(false) }
-    var plateExpanded by remember { mutableStateOf(false) }
 
-    // Inline edit buffers keyed by operation id
     var editBuffers by remember { mutableStateOf<Map<Long, OpEdit>>(emptyMap()) }
+
+    LaunchedEffect(detail?.setup?.id) {
+        val setup = detail?.setup ?: return@LaunchedEffect
+        if (setupNoteInitializedFor != setup.id) {
+            setupNote = setup.note.orEmpty()
+            setupNoteInitializedFor = setup.id
+        }
+    }
 
     LaunchedEffect(detail?.operations) {
         val ops = detail?.operations.orEmpty()
@@ -103,7 +120,19 @@ fun SetupScreen(
         }
     }
 
-    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+    val createCompatiblePlates by catalogRepo.observeCompatiblePlates(toolId ?: -1L)
+        .collectAsState(initial = emptyList())
+    val createPlateOptions = remember(toolId, createCompatiblePlates, plates) {
+        if (toolId != null && createCompatiblePlates.isNotEmpty()) createCompatiblePlates else plates
+    }
+    val createPlateOptionIds = remember(createPlateOptions) { createPlateOptions.map { it.id }.toSet() }
+    LaunchedEffect(toolId, createPlateOptionIds) {
+        if (plateId != null && plateId !in createPlateOptionIds) {
+            plateId = null
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -121,34 +150,77 @@ fun SetupScreen(
                 fontSize = 18.sp,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            ExposedDropdownMenuBox(expanded = jawExpanded, onExpandedChange = { jawExpanded = it }) {
-                OutlinedTextField(
-                    value = detail!!.jawName,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Кулачки") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = jawExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    colors = fieldColors(),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                ExposedDropdownMenu(expanded = jawExpanded, onDismissRequest = { jawExpanded = false }) {
-                    jaws.forEach { jaw ->
-                        DropdownMenuItem(
-                            text = { Text(jaw.name, color = CncOnSurface) },
-                            onClick = {
-                                jawExpanded = false
-                                scope.launch {
-                                    when (val r = tpRepo.updateSetupJaw(setupId, jaw.id)) {
-                                        is AppResult.Ok -> Unit
-                                        is AppResult.Err -> onError(r.message)
-                                    }
-                                }
-                            },
-                        )
+            CatalogDropdown(
+                label = "Кулачки",
+                type = CatalogType.jaw,
+                items = jaws,
+                selectedId = detail!!.setup.jawId,
+                onSelect = { id ->
+                    scope.launch {
+                        when (val result = tpRepo.updateSetupJaw(setupId, id)) {
+                            is AppResult.Ok -> Unit
+                            is AppResult.Err -> onError(result.message)
+                        }
                     }
-                }
-            }
+                },
+                onError = onError,
+                coverPath = coverById[detail!!.setup.jawId],
+                onOpenCover = { onOpenCatalogPhoto(detail!!.setup.jawId, 0) },
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            CncTextField(
+                value = setupNote,
+                onValueChange = { setupNote = it },
+                label = "Заметка",
+                singleLine = false,
+                minLines = 3,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PrimaryButton(
+                text = "Сохранить заметку",
+                busy = busy,
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        when (val result = tpRepo.updateSetupNote(setupId, setupNote)) {
+                            is AppResult.Ok -> Unit
+                            is AppResult.Err -> onError(result.message)
+                        }
+                        busy = false
+                    }
+                },
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Фото установа", color = CncOnSurface, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(8.dp))
+            PhotoStrip(
+                photos = detail!!.photos.map { PhotoStripItem(it.id, it.filePath) },
+                onAdd = { uri ->
+                    scope.launch {
+                        when (val result = tpRepo.addSetupPhoto(setupId, uri)) {
+                            is AppResult.Ok -> Unit
+                            is AppResult.Err -> onError(result.message)
+                        }
+                    }
+                },
+                onDelete = { id ->
+                    scope.launch {
+                        when (val result = tpRepo.deleteSetupPhoto(id)) {
+                            is AppResult.Ok -> Unit
+                            is AppResult.Err -> onError(result.message)
+                        }
+                    }
+                },
+                onReorder = { ids ->
+                    scope.launch {
+                        when (val result = tpRepo.reorderSetupPhotos(setupId, ids)) {
+                            is AppResult.Ok -> Unit
+                            is AppResult.Err -> onError(result.message)
+                        }
+                    }
+                },
+                onOpenViewer = onOpenSetupPhoto,
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Text("Операции", color = CncOnSurface, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
@@ -160,108 +232,92 @@ fun SetupScreen(
                     keyOf = { it.id },
                     onReorder = { ids ->
                         scope.launch {
-                            when (val r = tpRepo.reorderOperations(setupId, ids)) {
+                            when (val result = tpRepo.reorderOperations(setupId, ids)) {
                                 is AppResult.Ok -> Unit
-                                is AppResult.Err -> onError(r.message)
+                                is AppResult.Err -> onError(result.message)
                             }
                         }
                     },
                 ) { op, handle ->
-                    val buf = editBuffers[op.id] ?: OpEdit(op.opNumber, op.title, op.toolId, op.plateId, op.comment.orEmpty())
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
-                            .background(CncSurface)
-                            .padding(10.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            handle()
-                            Spacer(modifier = Modifier.weight(1f))
-                            IconButton(onClick = { pendingOpDelete = op }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = CncDanger)
+                    val buf = editBuffers[op.id]
+                        ?: OpEdit(op.opNumber, op.title, op.toolId, op.plateId, op.comment.orEmpty())
+                    OperationEditor(
+                        operation = op,
+                        buffer = buf,
+                        tools = tools,
+                        allPlates = plates,
+                        coverById = coverById,
+                        photos = detail!!.operationPhotos[op.id].orEmpty().map {
+                            PhotoStripItem(it.id, it.filePath)
+                        },
+                        dragHandle = handle,
+                        onBufferChange = { next -> editBuffers = editBuffers + (op.id to next) },
+                        onDelete = { pendingOpDelete = op },
+                        onOpenCatalogPhoto = onOpenCatalogPhoto,
+                        onOpenOperationPhoto = { index -> onOpenOperationPhoto(op.id, index) },
+                        onPhotoAdd = { uri ->
+                            scope.launch {
+                                when (val result = tpRepo.addOperationPhoto(op.id, uri)) {
+                                    is AppResult.Ok -> Unit
+                                    is AppResult.Err -> onError(result.message)
+                                }
                             }
-                        }
-                        CncTextField(
-                            value = buf.opNumber,
-                            onValueChange = { v ->
-                                editBuffers = editBuffers + (op.id to buf.copy(opNumber = v))
-                            },
-                            label = "Номер",
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CncTextField(
-                            value = buf.title,
-                            onValueChange = { v ->
-                                editBuffers = editBuffers + (op.id to buf.copy(title = v))
-                            },
-                            label = "Что делаем",
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CatalogDropdown(
-                            label = "Инструмент",
-                            items = tools,
-                            selectedId = buf.toolId,
-                            onSelect = { id ->
-                                editBuffers = editBuffers + (op.id to buf.copy(toolId = id))
-                            },
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CatalogDropdown(
-                            label = "Пластина",
-                            items = plates,
-                            selectedId = buf.plateId,
-                            onSelect = { id ->
-                                editBuffers = editBuffers + (op.id to buf.copy(plateId = id))
-                            },
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CncTextField(
-                            value = buf.comment,
-                            onValueChange = { v ->
-                                editBuffers = editBuffers + (op.id to buf.copy(comment = v))
-                            },
-                            label = "Комментарий",
-                            singleLine = false,
-                            minLines = 2,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        PrimaryButton(
-                            text = "Сохранить",
-                            onClick = {
+                        },
+                        onPhotoDelete = { id ->
+                            scope.launch {
+                                when (val result = tpRepo.deleteOperationPhoto(id)) {
+                                    is AppResult.Ok -> Unit
+                                    is AppResult.Err -> onError(result.message)
+                                }
+                            }
+                        },
+                        onPhotoReorder = { ids ->
+                            scope.launch {
+                                when (val result = tpRepo.reorderOperationPhotos(op.id, ids)) {
+                                    is AppResult.Ok -> Unit
+                                    is AppResult.Err -> onError(result.message)
+                                }
+                            }
+                        },
+                        onSave = { saveBuffer ->
+                            val selectedTool = saveBuffer.toolId
+                            val selectedPlate = saveBuffer.plateId
+                            if (selectedTool == null || selectedPlate == null) {
+                                onError("Выберите инструмент и пластину")
+                            } else {
                                 scope.launch {
                                     when (
-                                        val r = tpRepo.updateOperation(
+                                        val result = tpRepo.updateOperation(
                                             op.id,
-                                            buf.opNumber,
-                                            buf.title,
-                                            buf.toolId,
-                                            buf.plateId,
-                                            buf.comment,
+                                            saveBuffer.opNumber,
+                                            saveBuffer.title,
+                                            selectedTool,
+                                            selectedPlate,
+                                            saveBuffer.comment,
                                         )
                                     ) {
                                         is AppResult.Ok -> Unit
-                                        is AppResult.Err -> onError(r.message)
+                                        is AppResult.Err -> onError(result.message)
                                     }
                                 }
-                            },
-                        )
-                    }
+                            }
+                        },
+                        onError = onError,
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
             DangerButton(text = "Удалить установ", onClick = { confirmSetupDelete = true })
             Spacer(modifier = Modifier.height(80.dp))
         }
-        androidx.compose.foundation.layout.Box(
+        Box(
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         ) {
             CncFab(onClick = {
                 opNumber = ""
                 opTitle = ""
-                toolId = tools.firstOrNull()?.id
-                plateId = plates.firstOrNull()?.id
+                toolId = null
+                plateId = null
                 comment = ""
                 sheetOpen = true
             })
@@ -273,24 +329,49 @@ fun SetupScreen(
         Spacer(modifier = Modifier.height(8.dp))
         CncTextField(value = opTitle, onValueChange = { opTitle = it }, label = "Что делаем")
         Spacer(modifier = Modifier.height(8.dp))
-        CatalogDropdown(label = "Инструмент", items = tools, selectedId = toolId, onSelect = { toolId = it })
+        CatalogDropdown(
+            label = "Инструмент",
+            type = CatalogType.tool,
+            items = tools,
+            selectedId = toolId,
+            onSelect = { id -> toolId = id },
+            onError = onError,
+            coverPath = toolId?.let { coverById[it] },
+            onOpenCover = toolId?.let { id -> { onOpenCatalogPhoto(id, 0) } },
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        CatalogDropdown(label = "Пластина", items = plates, selectedId = plateId, onSelect = { plateId = it })
+        CatalogDropdown(
+            label = "Пластина",
+            type = CatalogType.plate,
+            items = createPlateOptions,
+            selectedId = plateId,
+            onSelect = { id -> plateId = id },
+            onError = onError,
+            autoLinkToolId = toolId,
+            coverPath = plateId?.let { coverById[it] },
+            onOpenCover = plateId?.let { id -> { onOpenCatalogPhoto(id, 0) } },
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        CncTextField(value = comment, onValueChange = { comment = it }, label = "Комментарий", singleLine = false, minLines = 2)
+        CncTextField(
+            value = comment,
+            onValueChange = { comment = it },
+            label = "Комментарий",
+            singleLine = false,
+            minLines = 2,
+        )
         Spacer(modifier = Modifier.height(16.dp))
         PrimaryButton(
             text = "Создать",
             busy = busy,
             enabled = toolId != null && plateId != null,
             onClick = {
-                val t = toolId ?: return@PrimaryButton
-                val p = plateId ?: return@PrimaryButton
+                val selectedTool = toolId ?: return@PrimaryButton
+                val selectedPlate = plateId ?: return@PrimaryButton
                 scope.launch {
                     busy = true
-                    when (val r = tpRepo.addOperation(setupId, opNumber, opTitle, t, p, comment)) {
+                    when (val result = tpRepo.addOperation(setupId, opNumber, opTitle, selectedTool, selectedPlate, comment)) {
                         is AppResult.Ok -> sheetOpen = false
-                        is AppResult.Err -> onError(r.message)
+                        is AppResult.Err -> onError(result.message)
                     }
                     busy = false
                 }
@@ -307,12 +388,12 @@ fun SetupScreen(
         onConfirm = {
             scope.launch {
                 busy = true
-                when (val r = tpRepo.deleteSetup(setupId)) {
+                when (val result = tpRepo.deleteSetup(setupId)) {
                     is AppResult.Ok -> {
                         confirmSetupDelete = false
                         onDeleted()
                     }
-                    is AppResult.Err -> onError(r.message)
+                    is AppResult.Err -> onError(result.message)
                 }
                 busy = false
             }
@@ -329,9 +410,9 @@ fun SetupScreen(
             val op = pendingOpDelete ?: return@ConfirmDialog
             scope.launch {
                 busy = true
-                when (val r = tpRepo.deleteOperation(op.id)) {
+                when (val result = tpRepo.deleteOperation(op.id)) {
                     is AppResult.Ok -> pendingOpDelete = null
-                    is AppResult.Err -> onError(r.message)
+                    is AppResult.Err -> onError(result.message)
                 }
                 busy = false
             }
@@ -339,45 +420,123 @@ fun SetupScreen(
     )
 }
 
+@Composable
+private fun OperationEditor(
+    operation: OperationEntity,
+    buffer: OpEdit,
+    tools: List<CatalogItemEntity>,
+    allPlates: List<CatalogItemEntity>,
+    coverById: Map<Long, String?>,
+    photos: List<PhotoStripItem>,
+    dragHandle: @Composable () -> Unit,
+    onBufferChange: (OpEdit) -> Unit,
+    onDelete: () -> Unit,
+    onOpenCatalogPhoto: (Long, Int) -> Unit,
+    onOpenOperationPhoto: (Int) -> Unit,
+    onPhotoAdd: (Uri) -> Unit,
+    onPhotoDelete: (Long) -> Unit,
+    onPhotoReorder: (List<Long>) -> Unit,
+    onSave: (OpEdit) -> Unit,
+    onError: (String) -> Unit,
+) {
+    val catalogRepo = CncApp.instance.catalogRepository
+    val compatiblePlates by catalogRepo.observeCompatiblePlates(buffer.toolId ?: -1L)
+        .collectAsState(initial = emptyList())
+    val plateOptions = remember(buffer.toolId, compatiblePlates, allPlates) {
+        if (buffer.toolId != null && compatiblePlates.isNotEmpty()) compatiblePlates else allPlates
+    }
+    val plateOptionIds = remember(plateOptions) { plateOptions.map { it.id }.toSet() }
+    LaunchedEffect(buffer.toolId, plateOptionIds) {
+        if (buffer.plateId != null && buffer.plateId !in plateOptionIds) {
+            onBufferChange(buffer.copy(plateId = null))
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
+            .background(CncSurface)
+            .padding(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            dragHandle()
+            Text(
+                "Операция ${operation.opNumber}",
+                color = CncOnSurfaceSecondary,
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+            )
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = CncDanger)
+            }
+        }
+        CncTextField(
+            value = buffer.opNumber,
+            onValueChange = { onBufferChange(buffer.copy(opNumber = it)) },
+            label = "Номер",
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        CncTextField(
+            value = buffer.title,
+            onValueChange = { onBufferChange(buffer.copy(title = it)) },
+            label = "Что делаем",
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        CatalogDropdown(
+            label = "Инструмент",
+            type = CatalogType.tool,
+            items = tools,
+            selectedId = buffer.toolId,
+            onSelect = { id -> onBufferChange(buffer.copy(toolId = id)) },
+            onError = onError,
+            coverPath = buffer.toolId?.let { coverById[it] },
+            onOpenCover = buffer.toolId?.let { id -> { onOpenCatalogPhoto(id, 0) } },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        CatalogDropdown(
+            label = "Пластина",
+            type = CatalogType.plate,
+            items = plateOptions,
+            selectedId = buffer.plateId,
+            onSelect = { id -> onBufferChange(buffer.copy(plateId = id)) },
+            onError = onError,
+            autoLinkToolId = buffer.toolId,
+            coverPath = buffer.plateId?.let { coverById[it] },
+            onOpenCover = buffer.plateId?.let { id -> { onOpenCatalogPhoto(id, 0) } },
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        CncTextField(
+            value = buffer.comment,
+            onValueChange = { onBufferChange(buffer.copy(comment = it)) },
+            label = "Комментарий",
+            singleLine = false,
+            minLines = 2,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Фото операции", color = CncOnSurfaceSecondary, fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        PhotoStrip(
+            photos = photos,
+            onAdd = onPhotoAdd,
+            onDelete = onPhotoDelete,
+            onReorder = onPhotoReorder,
+            onOpenViewer = onOpenOperationPhoto,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        PrimaryButton(
+            text = "Сохранить",
+            enabled = buffer.toolId != null && buffer.plateId != null,
+            onClick = { onSave(buffer) },
+        )
+    }
+}
+
 private data class OpEdit(
     val opNumber: String,
     val title: String,
-    val toolId: Long,
-    val plateId: Long,
+    val toolId: Long?,
+    val plateId: Long?,
     val comment: String,
 )
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CatalogDropdown(
-    label: String,
-    items: List<CatalogItemEntity>,
-    selectedId: Long?,
-    onSelect: (Long) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selected = items.find { it.id == selectedId }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.name.orEmpty(),
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
-            colors = fieldColors(),
-            shape = RoundedCornerShape(8.dp),
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            items.forEach { item ->
-                DropdownMenuItem(
-                    text = { Text(item.name, color = CncOnSurface) },
-                    onClick = {
-                        onSelect(item.id)
-                        expanded = false
-                    },
-                )
-            }
-        }
-    }
-}

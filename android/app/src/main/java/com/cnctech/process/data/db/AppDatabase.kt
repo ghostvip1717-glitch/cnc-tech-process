@@ -14,9 +14,11 @@ import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogItemPhotoEntity
 import com.cnctech.process.data.entity.CatalogType
 import com.cnctech.process.data.entity.OperationEntity
+import com.cnctech.process.data.entity.OperationPhotoEntity
 import com.cnctech.process.data.entity.PartEntity
 import com.cnctech.process.data.entity.PartPhotoEntity
 import com.cnctech.process.data.entity.SetupEntity
+import com.cnctech.process.data.entity.SetupPhotoEntity
 import com.cnctech.process.data.entity.TechProcessEntity
 
 class Converters {
@@ -36,9 +38,11 @@ class Converters {
         CatalogCompatibilityEntity::class,
         TechProcessEntity::class,
         SetupEntity::class,
+        SetupPhotoEntity::class,
         OperationEntity::class,
+        OperationPhotoEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

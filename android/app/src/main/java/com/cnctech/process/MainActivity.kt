@@ -57,11 +57,10 @@ import com.cnctech.process.ui.navigation.rootSection
 import com.cnctech.process.ui.navigation.title
 import com.cnctech.process.ui.navigation.toScreen
 import com.cnctech.process.ui.screens.assembly.AssemblyScreen
-import com.cnctech.process.ui.screens.catalog.CatalogGalleryScreen
+import com.cnctech.process.ui.screens.catalog.CatalogItemDetailScreen
 import com.cnctech.process.ui.screens.catalog.CatalogScreen
 import com.cnctech.process.ui.screens.parts.PartDetailScreen
 import com.cnctech.process.ui.screens.parts.PartEditScreen
-import com.cnctech.process.ui.screens.parts.PartGalleryScreen
 import com.cnctech.process.ui.screens.parts.PartsListScreen
 import com.cnctech.process.ui.screens.settings.SettingsScreen
 import com.cnctech.process.ui.screens.techprocess.SetupDetailScreen
@@ -190,6 +189,26 @@ private fun CncAppRoot() {
                             onClose = { pop() },
                         )
                     }
+                    is Screen.SetupPhotoViewer -> {
+                        val photos by CncApp.instance.techProcessRepository
+                            .observeSetupPhotos(r.setupId)
+                            .collectAsState(initial = emptyList())
+                        FullscreenPhotoViewer(
+                            photoPaths = photos.map { it.filePath },
+                            startIndex = r.startIndex,
+                            onClose = { pop() },
+                        )
+                    }
+                    is Screen.OperationPhotoViewer -> {
+                        val photos by CncApp.instance.techProcessRepository
+                            .observeOperationPhotos(r.operationId)
+                            .collectAsState(initial = emptyList())
+                        FullscreenPhotoViewer(
+                            photoPaths = photos.map { it.filePath },
+                            startIndex = r.startIndex,
+                            onClose = { pop() },
+                        )
+                    }
                     else -> Unit
                 }
             }
@@ -218,9 +237,10 @@ private fun CncAppRoot() {
                             is Screen.Part -> PartDetailScreen(
                                 partId = r.partId,
                                 onEdit = { push(Screen.PartEdit(r.partId)) },
-                                onOpenGallery = { push(Screen.PartGallery(r.partId)) },
+                                onOpenPhoto = { index -> push(Screen.PartPhotoViewer(r.partId, index)) },
                                 onOpenTechProcess = { push(Screen.TechProcess(r.partId)) },
                                 onOpenAssembly = { push(Screen.Assembly(r.partId)) },
+                                onError = ::showError,
                             )
                             is Screen.PartEdit -> PartEditScreen(
                                 partId = r.partId,
@@ -233,13 +253,6 @@ private fun CncAppRoot() {
                                 },
                                 onError = ::showError,
                             )
-                            is Screen.PartGallery -> PartGalleryScreen(
-                                partId = r.partId,
-                                onError = ::showError,
-                                onOpenPhoto = { index ->
-                                    push(Screen.PartPhotoViewer(r.partId, index))
-                                },
-                            )
                             is Screen.TechProcess -> TechProcessScreen(
                                 partId = r.partId,
                                 onOpenSetup = { setupId -> push(Screen.Setup(r.partId, setupId)) },
@@ -248,6 +261,15 @@ private fun CncAppRoot() {
                             is Screen.Setup -> SetupDetailScreen(
                                 setupId = r.setupId,
                                 onEdit = { push(Screen.SetupEdit(r.partId, r.setupId)) },
+                                onOpenSetupPhoto = { index ->
+                                    push(Screen.SetupPhotoViewer(r.setupId, index))
+                                },
+                                onOpenOperationPhoto = { operationId, index ->
+                                    push(Screen.OperationPhotoViewer(operationId, index))
+                                },
+                                onOpenCatalogPhoto = { catalogItemId, index ->
+                                    push(Screen.CatalogPhotoViewer(catalogItemId, index))
+                                },
                                 onError = ::showError,
                             )
                             is Screen.SetupEdit -> SetupScreen(
@@ -258,6 +280,15 @@ private fun CncAppRoot() {
                                         stack.removeAt(stack.lastIndex)
                                     }
                                 },
+                                onOpenCatalogPhoto = { catalogItemId, index ->
+                                    push(Screen.CatalogPhotoViewer(catalogItemId, index))
+                                },
+                                onOpenSetupPhoto = { index ->
+                                    push(Screen.SetupPhotoViewer(r.setupId, index))
+                                },
+                                onOpenOperationPhoto = { operationId, index ->
+                                    push(Screen.OperationPhotoViewer(operationId, index))
+                                },
                                 onError = ::showError,
                             )
                             is Screen.Assembly -> AssemblyScreen(
@@ -265,22 +296,26 @@ private fun CncAppRoot() {
                                 onError = ::showError,
                             )
                             Screen.Catalog -> CatalogScreen(
-                                onOpenGallery = { id, title -> push(Screen.CatalogGallery(id, title)) },
+                                onOpenItem = { id -> push(Screen.CatalogItemDetail(id)) },
                                 onError = ::showError,
                             )
-                            is Screen.CatalogGallery -> CatalogGalleryScreen(
+                            is Screen.CatalogItemDetail -> CatalogItemDetailScreen(
                                 catalogItemId = r.catalogItemId,
-                                title = r.title,
+                                onEdit = {},
                                 onError = ::showError,
                                 onOpenPhoto = { index ->
                                     push(Screen.CatalogPhotoViewer(r.catalogItemId, index))
                                 },
+                                onOpenRelated = { id -> push(Screen.CatalogItemDetail(id)) },
                             )
                             Screen.Settings -> SettingsScreen(
                                 onError = ::showError,
                                 onInfo = ::showInfo,
                             )
-                            is Screen.PartPhotoViewer, is Screen.CatalogPhotoViewer -> Unit
+                            is Screen.PartPhotoViewer,
+                            is Screen.CatalogPhotoViewer,
+                            is Screen.SetupPhotoViewer,
+                            is Screen.OperationPhotoViewer -> Unit
                         }
                     }
                 }

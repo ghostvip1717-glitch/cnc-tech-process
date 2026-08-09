@@ -32,4 +32,5 @@ data class SetupEntity(
     val techProcessId: Long,
     val order: Int,
     val jawId: Long,
+    val note: String? = null,
 )

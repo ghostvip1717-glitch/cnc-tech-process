@@ -16,6 +16,12 @@ class PhotoStorage(private val context: Context) {
     fun catalogDir(catalogItemId: Long): File =
         File(photosRoot, "catalog/$catalogItemId").also { it.mkdirs() }
 
+    fun setupDir(setupId: Long): File =
+        File(photosRoot, "setups/$setupId").also { it.mkdirs() }
+
+    fun operationDir(operationId: Long): File =
+        File(photosRoot, "operations/$operationId").also { it.mkdirs() }
+
     /**
      * Temp JPEG in cacheDir/camera for TakePicture.
      * Returns FileProvider content Uri; [CaptureTarget.file] should be deleted after copy/cancel.
