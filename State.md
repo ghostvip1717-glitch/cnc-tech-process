@@ -46,3 +46,4 @@
 - 2026-08-09: DB v4 notes+setup/op photos; PhotoStrip replaces galleries; CatalogItemDetail; smart plate filter + inline create
 - 2026-08-09: PhotoStrip/ReorderableColumn → LazyRow/LazyColumn; Setup screens single LazyColumn (no nested scroll)
 - 2026-08-09: PhotoStorage copyFromUri downscale 1600+EXIF+JPEG85; pointerInput keys; viewer 1-finger swipe; Catalog(activeType) persist tab
+- 2026-08-09: LayoutPrefs List/GridLarge/GridCompact; toggle in AppHeader for Parts+Catalog only

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -37,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.cnctech.process.CncApp
 import com.cnctech.process.data.entity.PartEntity
+import com.cnctech.process.data.prefs.LayoutMode
 import com.cnctech.process.data.repository.AppResult
 import com.cnctech.process.ui.components.CncBottomSheet
 import com.cnctech.process.ui.components.CncFab
@@ -63,6 +69,7 @@ import java.io.File
 @OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun PartsListScreen(
+    layoutMode: LayoutMode,
     onOpenPart: (Long) -> Unit,
     onError: (String) -> Unit,
 ) {
@@ -104,16 +111,39 @@ fun PartsListScreen(
             } else if (parts.isEmpty()) {
                 EmptyText("Детали не найдены")
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(parts, key = { it.part.id }) { item ->
-                        PartListCard(
-                            part = item.part,
-                            coverPath = item.photos.firstOrNull()?.filePath,
-                            photoCount = item.photos.size,
-                            onClick = { onOpenPart(item.part.id) },
-                        )
+                when (layoutMode) {
+                    LayoutMode.List -> {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(parts, key = { it.part.id }) { item ->
+                                PartListCard(
+                                    part = item.part,
+                                    coverPath = item.photos.firstOrNull()?.filePath,
+                                    photoCount = item.photos.size,
+                                    onClick = { onOpenPart(item.part.id) },
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(72.dp)) }
+                        }
                     }
-                    item { Spacer(modifier = Modifier.height(72.dp)) }
+                    LayoutMode.GridLarge, LayoutMode.GridCompact -> {
+                        val compact = layoutMode == LayoutMode.GridCompact
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(if (compact) 3 else 2),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            gridItems(parts, key = { it.part.id }) { item ->
+                                PartGridCell(
+                                    part = item.part,
+                                    coverPath = item.photos.firstOrNull()?.filePath,
+                                    photoCount = item.photos.size,
+                                    onClick = { onOpenPart(item.part.id) },
+                                    compact = compact,
+                                )
+                            }
+                            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(72.dp)) }
+                        }
+                    }
                 }
             }
         }
@@ -237,4 +267,109 @@ private fun PartBadge(
             .background(background)
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
+}
+
+
+@Composable
+private fun PartGridCell(
+    part: PartEntity,
+    coverPath: String?,
+    photoCount: Int,
+    onClick: () -> Unit,
+    compact: Boolean,
+) {
+    if (compact) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .border(1.dp, CncBorder, RoundedCornerShape(10.dp))
+                .background(CncSkeleton)
+                .clickable(onClick = onClick),
+        ) {
+            if (coverPath != null) {
+                AsyncImage(
+                    model = File(coverPath),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            Text(
+                text = part.number,
+                color = CncOnSurface,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(CncSurface.copy(alpha = 0.85f))
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+            )
+        }
+    } else {
+        val minutes = part.machiningTimeMinutes
+        val programs = part.programCount
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
+                .background(CncSurface)
+                .clickable(onClick = onClick),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .background(CncSkeleton),
+            ) {
+                if (coverPath != null) {
+                    AsyncImage(
+                        model = File(coverPath),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = "${part.number} — ${part.title}",
+                    color = CncOnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    maxLines = 2,
+                )
+                if (minutes != null || programs != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (minutes != null) {
+                            PartBadge(
+                                text = "$minutes мин",
+                                background = CncBadgeTimeBg,
+                                textColor = CncBadgeTimeText,
+                            )
+                        }
+                        if (programs != null) {
+                            PartBadge(
+                                text = "$programs прог.",
+                                background = CncBadgeProgramsBg,
+                                textColor = CncBadgeProgramsText,
+                            )
+                        }
+                    }
+                } else if (photoCount > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Фото: $photoCount",
+                        color = CncOnSurfaceSecondary,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+    }
 }

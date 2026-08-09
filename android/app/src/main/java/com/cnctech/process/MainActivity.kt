@@ -22,21 +22,30 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ViewComfy
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +54,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.cnctech.process.data.prefs.LayoutMode
+import com.cnctech.process.data.prefs.LayoutPrefs
 import com.cnctech.process.ui.components.AppHeader
 import com.cnctech.process.ui.components.AutoDismissSnackbarHost
 import com.cnctech.process.ui.components.FullscreenPhotoViewer
@@ -73,7 +84,6 @@ import com.cnctech.process.ui.theme.CncPrimary
 import com.cnctech.process.ui.theme.CncSurface
 import com.cnctech.process.ui.theme.CncTheme
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -90,6 +100,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun CncAppRoot() {
+    val context = LocalContext.current
     val stack = remember { mutableStateListOf<Screen>(Screen.Parts) }
     val route = stack.last()
     val snackbar = remember { SnackbarHostState() }
@@ -97,6 +108,13 @@ private fun CncAppRoot() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val isRoot = route.isRoot()
     val currentRoot = route.rootSection()
+
+    var partsLayout by remember { mutableStateOf(LayoutMode.List) }
+    var catalogLayout by remember { mutableStateOf(LayoutMode.List) }
+    LaunchedEffect(Unit) {
+        partsLayout = LayoutPrefs.getPartsLayout(context)
+        catalogLayout = LayoutPrefs.getCatalogLayout(context)
+    }
 
     fun push(screen: Screen) {
         stack.add(screen)
@@ -227,10 +245,36 @@ private fun CncAppRoot() {
                         onBack = { pop() },
                         showMenu = isRoot,
                         onMenuClick = { scope.launch { drawerState.open() } },
+                        actions = {
+                            when (route) {
+                                Screen.Parts -> {
+                                    LayoutToggleButton(
+                                        mode = partsLayout,
+                                        onClick = {
+                                            val next = partsLayout.next()
+                                            partsLayout = next
+                                            LayoutPrefs.setPartsLayout(context, next)
+                                        },
+                                    )
+                                }
+                                is Screen.Catalog -> {
+                                    LayoutToggleButton(
+                                        mode = catalogLayout,
+                                        onClick = {
+                                            val next = catalogLayout.next()
+                                            catalogLayout = next
+                                            LayoutPrefs.setCatalogLayout(context, next)
+                                        },
+                                    )
+                                }
+                                else -> Unit
+                            }
+                        },
                     )
                     Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                         when (val r = route) {
                             Screen.Parts -> PartsListScreen(
+                                layoutMode = partsLayout,
                                 onOpenPart = { push(Screen.Part(it)) },
                                 onError = ::showError,
                             )
@@ -297,6 +341,7 @@ private fun CncAppRoot() {
                             )
                             is Screen.Catalog -> CatalogScreen(
                                 activeType = r.activeType,
+                                layoutMode = catalogLayout,
                                 onActiveTypeChange = { type ->
                                     if (stack.isNotEmpty() && stack.last() is Screen.Catalog) {
                                         stack[stack.lastIndex] = Screen.Catalog(type)
@@ -359,5 +404,32 @@ private fun DrawerItem(
             fontSize = 16.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
+    }
+}
+
+
+private fun LayoutMode.next(): LayoutMode = when (this) {
+    LayoutMode.List -> LayoutMode.GridLarge
+    LayoutMode.GridLarge -> LayoutMode.GridCompact
+    LayoutMode.GridCompact -> LayoutMode.List
+}
+
+@Composable
+private fun LayoutToggleButton(
+    mode: LayoutMode,
+    onClick: () -> Unit,
+) {
+    val icon = when (mode) {
+        LayoutMode.List -> Icons.AutoMirrored.Filled.ViewList
+        LayoutMode.GridLarge -> Icons.Default.GridView
+        LayoutMode.GridCompact -> Icons.Default.ViewComfy
+    }
+    val label = when (mode) {
+        LayoutMode.List -> "Список"
+        LayoutMode.GridLarge -> "Крупная плитка"
+        LayoutMode.GridCompact -> "Компактная плитка"
+    }
+    IconButton(onClick = onClick) {
+        Icon(icon, contentDescription = label, tint = CncPrimary)
     }
 }

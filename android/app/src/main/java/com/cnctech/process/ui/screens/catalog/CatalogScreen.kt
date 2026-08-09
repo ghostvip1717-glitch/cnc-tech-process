@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -50,6 +55,8 @@ import coil.compose.AsyncImage
 import com.cnctech.process.CncApp
 import com.cnctech.process.data.entity.CatalogItemEntity
 import com.cnctech.process.data.entity.CatalogType
+import com.cnctech.process.data.prefs.LayoutMode
+import com.cnctech.process.data.repository.CatalogItemWithPhoto
 import com.cnctech.process.data.repository.AppResult
 import com.cnctech.process.ui.components.ConfirmDialog
 import com.cnctech.process.ui.components.CncBottomSheet
@@ -81,6 +88,7 @@ private data class Tab(val type: CatalogType, val label: String)
 @Composable
 fun CatalogScreen(
     activeType: CatalogType,
+    layoutMode: LayoutMode,
     onActiveTypeChange: (CatalogType) -> Unit,
     onOpenItem: (Long) -> Unit,
     onError: (String) -> Unit,
@@ -195,72 +203,44 @@ fun CatalogScreen(
             if (items.isEmpty()) {
                 EmptyText("Позиции не найдены")
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(items, key = { it.item.id }) { row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
-                                .background(CncSurface)
-                                .clickable { onOpenItem(row.item.id) }
-                                .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(CncSkeleton),
-                            ) {
-                                row.coverPath?.let { path ->
-                                    AsyncImage(
-                                        model = File(path),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                }
+                when (layoutMode) {
+                    LayoutMode.List -> {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(items, key = { it.item.id }) { row ->
+                                CatalogListRow(
+                                    row = row,
+                                    onOpenItem = { onOpenItem(row.item.id) },
+                                    onEdit = {
+                                        editing = row.item
+                                        name = row.item.name
+                                        note = row.item.note.orEmpty()
+                                        stockQtyText = row.item.stockQty?.toString().orEmpty()
+                                        minStockText = row.item.minStockThreshold.toString()
+                                        sheetMode = "edit"
+                                    },
+                                    onDelete = { pendingDelete = row.item },
+                                )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        row.item.name,
-                                        color = CncOnSurface,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f, fill = false),
-                                    )
-                                    if (row.item.type == CatalogType.plate) {
-                                        PlateStockBadge(
-                                            stockQty = row.item.stockQty,
-                                            minStockThreshold = row.item.minStockThreshold,
-                                        )
-                                    }
-                                }
-                                row.item.note?.let {
-                                    Text(it, color = CncOnSurfaceSecondary, fontSize = 13.sp)
-                                }
-                            }
-                            IconButton(onClick = {
-                                editing = row.item
-                                name = row.item.name
-                                note = row.item.note.orEmpty()
-                                stockQtyText = row.item.stockQty?.toString().orEmpty()
-                                minStockText = row.item.minStockThreshold.toString()
-                                sheetMode = "edit"
-                            }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Изменить", tint = CncPrimary)
-                            }
-                            IconButton(onClick = { pendingDelete = row.item }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = CncDanger)
-                            }
+                            item { Spacer(modifier = Modifier.height(72.dp)) }
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(72.dp)) }
+                    LayoutMode.GridLarge, LayoutMode.GridCompact -> {
+                        val compact = layoutMode == LayoutMode.GridCompact
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(if (compact) 3 else 2),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            gridItems(items, key = { it.item.id }) { row ->
+                                CatalogGridCell(
+                                    row = row,
+                                    onOpenItem = { onOpenItem(row.item.id) },
+                                    compact = compact,
+                                )
+                            }
+                            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(72.dp)) }
+                        }
+                    }
                 }
             }
         }
@@ -511,5 +491,151 @@ private fun CompatibilityRow(
             fontSize = 14.sp,
         )
         badge?.invoke()
+    }
+}
+
+
+@Composable
+private fun CatalogListRow(
+    row: CatalogItemWithPhoto,
+    onOpenItem: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
+            .background(CncSurface)
+            .clickable(onClick = onOpenItem)
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CncSkeleton),
+        ) {
+            row.coverPath?.let { path ->
+                AsyncImage(
+                    model = File(path),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    row.item.name,
+                    color = CncOnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (row.item.type == CatalogType.plate) {
+                    PlateStockBadge(
+                        stockQty = row.item.stockQty,
+                        minStockThreshold = row.item.minStockThreshold,
+                    )
+                }
+            }
+            row.item.note?.let {
+                Text(it, color = CncOnSurfaceSecondary, fontSize = 13.sp)
+            }
+        }
+        IconButton(onClick = onEdit) {
+            Icon(Icons.Default.Edit, contentDescription = "Изменить", tint = CncPrimary)
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = CncDanger)
+        }
+    }
+}
+
+@Composable
+private fun CatalogGridCell(
+    row: CatalogItemWithPhoto,
+    onOpenItem: () -> Unit,
+    compact: Boolean,
+) {
+    if (compact) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(10.dp))
+                .border(1.dp, CncBorder, RoundedCornerShape(10.dp))
+                .background(CncSkeleton)
+                .clickable(onClick = onOpenItem),
+        ) {
+            row.coverPath?.let { path ->
+                AsyncImage(
+                    model = File(path),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            Text(
+                text = row.item.name,
+                color = CncOnSurface,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(CncSurface.copy(alpha = 0.85f))
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+            )
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .border(1.dp, CncBorder, RoundedCornerShape(12.dp))
+                .background(CncSurface)
+                .clickable(onClick = onOpenItem),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .background(CncSkeleton),
+            ) {
+                row.coverPath?.let { path ->
+                    AsyncImage(
+                        model = File(path),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = row.item.name,
+                    color = CncOnSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    maxLines = 2,
+                )
+                if (row.item.type == CatalogType.plate) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    PlateStockBadge(
+                        stockQty = row.item.stockQty,
+                        minStockThreshold = row.item.minStockThreshold,
+                    )
+                }
+            }
+        }
     }
 }
