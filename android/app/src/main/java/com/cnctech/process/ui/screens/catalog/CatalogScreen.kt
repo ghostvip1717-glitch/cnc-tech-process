@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Hardware
 import androidx.compose.material.icons.filled.Square
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -57,6 +56,7 @@ import com.cnctech.process.ui.components.CncBottomSheet
 import com.cnctech.process.ui.components.CncFab
 import com.cnctech.process.ui.components.CncTextField
 import com.cnctech.process.ui.components.EmptyText
+import com.cnctech.process.ui.components.PlateStockBadge
 import com.cnctech.process.ui.components.PrimaryButton
 import com.cnctech.process.ui.components.fieldColors
 import com.cnctech.process.ui.theme.CncBorder
@@ -479,36 +479,6 @@ private fun parsePlateStock(
         return AppResult.Err("Порог не может быть отрицательным")
     }
     return AppResult.Ok(stockQty to minStock)
-}
-
-@Composable
-private fun PlateStockBadge(
-    stockQty: Int?,
-    minStockThreshold: Int,
-) {
-    if (stockQty == null) return
-    val low = stockQty < minStockThreshold
-    val bg = if (low) CncDanger.copy(alpha = 0.14f) else CncSkeleton
-    val fg = if (low) CncDanger else CncOnSurfaceSecondary
-    val label = if (low) "Осталось: $stockQty шт" else "$stockQty шт"
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(bg)
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        if (low) {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                tint = CncDanger,
-                modifier = Modifier.size(14.dp),
-            )
-        }
-        Text(label, color = fg, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-    }
 }
 
 @Composable

@@ -8,6 +8,7 @@ sealed class Screen {
     data class PartPhotoViewer(val partId: Long, val startIndex: Int) : Screen()
     data class TechProcess(val partId: Long) : Screen()
     data class Setup(val partId: Long, val setupId: Long) : Screen()
+    data class SetupEdit(val partId: Long, val setupId: Long) : Screen()
     data class Assembly(val partId: Long) : Screen()
     data object Catalog : Screen()
     data class CatalogGallery(val catalogItemId: Long, val title: String) : Screen()
@@ -32,7 +33,8 @@ fun Screen.isPhotoViewer(): Boolean =
 
 fun Screen.rootSection(): RootSection = when (this) {
     Screen.Parts, is Screen.Part, is Screen.PartEdit, is Screen.PartGallery,
-    is Screen.PartPhotoViewer, is Screen.TechProcess, is Screen.Setup, is Screen.Assembly -> RootSection.Parts
+    is Screen.PartPhotoViewer, is Screen.TechProcess, is Screen.Setup, is Screen.SetupEdit,
+    is Screen.Assembly -> RootSection.Parts
     Screen.Catalog, is Screen.CatalogGallery, is Screen.CatalogPhotoViewer -> RootSection.Catalog
     Screen.Settings -> RootSection.Settings
 }
@@ -45,6 +47,7 @@ fun Screen.title(): String = when (this) {
     is Screen.PartPhotoViewer -> ""
     is Screen.TechProcess -> "Техпроцесс"
     is Screen.Setup -> "Установ"
+    is Screen.SetupEdit -> "Изменить установ"
     is Screen.Assembly -> "Сборка"
     Screen.Catalog -> "Инструмент"
     is Screen.CatalogGallery -> "Фото"

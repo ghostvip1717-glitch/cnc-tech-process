@@ -41,3 +41,5 @@
 - 2026-07-31: FullscreenPhotoViewer — pinch-zoom+pager; Screen.Part/CatalogPhotoViewer; tap preview in galleries; edge-to-edge без AppHeader
 - 2026-07-31: Catalog stockQty/minStock + catalog_compatibility (plate↔tool); DB v3; badges in CatalogScreen
 - 2026-07-31: Camera capture via TakePicture+FileProvider; Part/Catalog gallery «Сделать фото»
+- 2026-08-09: SetupDetailScreen (read-only) + Screen.SetupEdit; PlateStockBadge shared component
+- 2026-08-09: Theme M3 surfaceContainer*/outline roles for dark dropdown menus

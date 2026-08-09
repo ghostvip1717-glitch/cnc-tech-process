@@ -64,6 +64,7 @@ import com.cnctech.process.ui.screens.parts.PartEditScreen
 import com.cnctech.process.ui.screens.parts.PartGalleryScreen
 import com.cnctech.process.ui.screens.parts.PartsListScreen
 import com.cnctech.process.ui.screens.settings.SettingsScreen
+import com.cnctech.process.ui.screens.techprocess.SetupDetailScreen
 import com.cnctech.process.ui.screens.techprocess.SetupScreen
 import com.cnctech.process.ui.screens.techprocess.TechProcessScreen
 import com.cnctech.process.ui.theme.CncBackground
@@ -244,9 +245,19 @@ private fun CncAppRoot() {
                                 onOpenSetup = { setupId -> push(Screen.Setup(r.partId, setupId)) },
                                 onError = ::showError,
                             )
-                            is Screen.Setup -> SetupScreen(
+                            is Screen.Setup -> SetupDetailScreen(
                                 setupId = r.setupId,
-                                onDeleted = { pop() },
+                                onEdit = { push(Screen.SetupEdit(r.partId, r.setupId)) },
+                                onError = ::showError,
+                            )
+                            is Screen.SetupEdit -> SetupScreen(
+                                setupId = r.setupId,
+                                onDeleted = {
+                                    if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                                    if (stack.isNotEmpty() && stack.last() is Screen.Setup) {
+                                        stack.removeAt(stack.lastIndex)
+                                    }
+                                },
                                 onError = ::showError,
                             )
                             is Screen.Assembly -> AssemblyScreen(

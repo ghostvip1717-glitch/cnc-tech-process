@@ -37,6 +37,12 @@ class CatalogRepository(
 
     suspend fun getById(id: Long): CatalogItemEntity? = dao.getById(id)
 
+    suspend fun getByIds(ids: List<Long>): List<CatalogItemEntity> =
+        if (ids.isEmpty()) emptyList() else dao.getByIds(ids)
+
+    suspend fun getPhotos(catalogItemId: Long): List<CatalogItemPhotoEntity> =
+        dao.getPhotos(catalogItemId)
+
     suspend fun listByType(type: CatalogType): List<CatalogItemEntity> = dao.listByType(type)
 
     suspend fun create(type: CatalogType, name: String, note: String?): AppResult<Long> {
